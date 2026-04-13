@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
 import { CharacterLobby } from '../components/lobby/CharacterLobby'
 import { MapBoard } from '../components/board/MapBoard'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { usePlayerSessionId } from '../hooks/usePlayerSessionId'
 import type { RoomState, Token } from '../types/room'
 import type { SessionState } from '../types/session'
@@ -232,6 +233,7 @@ export function PlayRoom() {
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-4">
+          <ThemeToggle />
           <div
             role="status"
             aria-live="polite"

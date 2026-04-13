@@ -1,4 +1,5 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
+import { ThemeToggle } from './components/ThemeToggle'
 import { DM_DEV_KEY } from './config'
 import { PlayRoom } from './pages/PlayRoom'
 
@@ -9,6 +10,10 @@ function Home() {
       <a href="#inicio-contenido" className="skip-link">
         Saltar al contenido principal
       </a>
+
+      <div className="absolute right-4 top-4 z-50 md:right-6 md:top-6">
+        <ThemeToggle />
+      </div>
 
       <main
         id="inicio-contenido"
