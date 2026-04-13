@@ -21,6 +21,8 @@ export type RoomState = {
   settings: {
     backgroundUrl: string
     backgroundType: 'image' | 'video'
+    mapAudioEnabled: boolean
+    mapVolume: number
     gridSize: number
     snapToGrid: boolean
   }
@@ -33,6 +35,8 @@ export function createEmptyRoom(roomId: string): RoomState {
     settings: {
       backgroundUrl: '',
       backgroundType: 'image',
+      mapAudioEnabled: false,
+      mapVolume: 70,
       gridSize: 50,
       snapToGrid: true,
     },

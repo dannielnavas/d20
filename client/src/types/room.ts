@@ -19,6 +19,8 @@ export type RoomState = {
   settings: {
     backgroundUrl: string
     backgroundType: 'image' | 'video'
+    mapAudioEnabled: boolean
+    mapVolume: number
     gridSize: number
     snapToGrid: boolean
   }

@@ -29,44 +29,48 @@ import { TokensLayer } from './TokensLayer'
 type YoutubeMapPlayer = {
   destroy: () => void
   unMute: () => void
+  mute?: () => void
   playVideo: () => void
   isMuted: () => boolean
-}
-
-type DirectMapVideoAudio = {
-  muted: boolean
-  unlock: () => void
+  setVolume?: (value: number) => void
 }
 
 function DirectMapLoopVideo({
   src,
+  audioEnabled,
+  volumePercent,
   onLoadedMetadata,
   onError,
   onAudioState,
 }: {
   src: string
+  audioEnabled: boolean
+  volumePercent: number
   onLoadedMetadata: (e: SyntheticEvent<HTMLVideoElement>) => void
   onError: () => void
-  onAudioState: (s: DirectMapVideoAudio | null) => void
+  onAudioState: (el: HTMLVideoElement | null) => void
 }) {
-  const [muted, setMuted] = useState(true)
   const ref = useRef<HTMLVideoElement | null>(null)
 
-  const unlock = useCallback(() => {
-    setMuted(false)
+  useEffect(() => {
     const v = ref.current
-    if (v) {
-      v.muted = false
-      void v.play().catch(() => {})
-    }
-  }, [])
+    if (!v) return
+    v.volume = Math.max(0, Math.min(1, volumePercent / 100))
+  }, [volumePercent])
 
   useEffect(() => {
-    onAudioState({ muted, unlock })
+    const v = ref.current
+    if (!v) return
+    v.muted = !audioEnabled
+    if (audioEnabled) void v.play().catch(() => {})
+  }, [audioEnabled])
+
+  useEffect(() => {
+    onAudioState(ref.current)
     return () => {
       onAudioState(null)
     }
-  }, [muted, unlock, onAudioState])
+  }, [onAudioState])
 
   return (
     <video
@@ -74,7 +78,7 @@ function DirectMapLoopVideo({
       className="pointer-events-none absolute inset-0 h-full w-full object-contain"
       src={src}
       loop
-      muted={muted}
+      muted={!audioEnabled}
       playsInline
       autoPlay
       preload="metadata"
@@ -102,35 +106,24 @@ export function MapBoard({
   canDragToken,
   isDm,
 }: MapBoardProps) {
-  const { backgroundUrl, backgroundType } = roomState.settings
+  const { backgroundUrl, backgroundType, mapAudioEnabled } = roomState.settings
+  const mapVolume = Math.min(100, Math.max(0, Math.round(roomState.settings.mapVolume ?? 70)))
   const [dims, setDims] = useState({ w: DEFAULT_W, h: DEFAULT_H })
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const ytPlayerRef = useRef<YoutubeMapPlayer | null>(null)
   const rawYtFrameId = useId()
   const ytIframeId = `vtt-yt${rawYtFrameId.replace(/\W/g, '')}`
 
-  const [directMapAudio, setDirectMapAudio] = useState<DirectMapVideoAudio | null>(null)
-  const [youtubeAudioCue, setYoutubeAudioCue] = useState(false)
+  const directMapVideoRef = useRef<HTMLVideoElement | null>(null)
   const [dmScreen, setDmScreen] = useState<DmScreenId>('mesa')
 
-  const onDirectMapAudioState = useCallback((s: DirectMapVideoAudio | null) => {
-    setDirectMapAudio(s)
+  const onDirectMapAudioState = useCallback((el: HTMLVideoElement | null) => {
+    directMapVideoRef.current = el
   }, [])
 
   const handleTransformInit = useCallback((ctx: ReactZoomPanPinchRef) => {
     viewportRef.current = ctx.instance.wrapperComponent
   }, [])
-
-  useEffect(() => {
-    const url = backgroundUrl.trim()
-    if (!url) {
-      setDims({ w: DEFAULT_W, h: DEFAULT_H })
-      return
-    }
-    if (backgroundType === 'video' && parseYoutubeUrl(url)) {
-      setDims({ w: 1920, h: 1080 })
-    }
-  }, [backgroundUrl, backgroundType])
 
   const onImgLoad = useCallback((e: SyntheticEvent<HTMLImageElement>) => {
     const el = e.currentTarget
@@ -159,6 +152,12 @@ export function MapBoard({
     hasMedia && backgroundType === 'video'
       ? parseYoutubeUrl(backgroundUrl)
       : null
+  const boardDims =
+    !hasMedia
+      ? { w: DEFAULT_W, h: DEFAULT_H }
+      : backgroundType === 'video' && youtubeParsed
+        ? { w: 1920, h: 1080 }
+        : dims
 
   const ytEmbedSrc = useMemo(() => {
     if (!hasMedia || backgroundType !== 'video') return ''
@@ -175,9 +174,6 @@ export function MapBoard({
     if (!parsed) {
       ytPlayerRef.current?.destroy()
       ytPlayerRef.current = null
-      queueMicrotask(() => {
-        setYoutubeAudioCue(false)
-      })
       return
     }
 
@@ -204,10 +200,7 @@ export function MapBoard({
           }
         ).YT
 
-        if (!YT?.Player) {
-          setYoutubeAudioCue(true)
-          return
-        }
+        if (!YT?.Player) return
 
         try {
           const player = new YT.Player(ytIframeId, {
@@ -216,54 +209,105 @@ export function MapBoard({
                 if (cancelled) return
                 ytPlayerRef.current = e.target
                 try {
-                  setYoutubeAudioCue(Boolean(e.target.isMuted?.()))
+                  e.target.setVolume?.(mapVolume)
                 } catch {
-                  setYoutubeAudioCue(true)
+                  /* opcional en typings */
+                }
+                if (mapAudioEnabled) {
+                  try {
+                    e.target.unMute()
+                    e.target.playVideo()
+                  } catch {
+                    /* puede requerir interacción del navegador */
+                  }
+                } else {
+                  try {
+                    e.target.mute?.()
+                  } catch {
+                    /* opcional en typings */
+                  }
                 }
               },
             },
           })
           ytPlayerRef.current = player
         } catch {
-          setYoutubeAudioCue(true)
+          /* creación del player puede fallar en iframes bloqueados */
         }
       })
-      .catch(() => {
-        setYoutubeAudioCue(true)
-      })
+      .catch(() => {})
 
     return () => {
       cancelled = true
       ytPlayerRef.current?.destroy()
       ytPlayerRef.current = null
     }
-  }, [backgroundUrl, backgroundType, hasMedia, ytIframeId])
+  }, [backgroundUrl, backgroundType, hasMedia, mapAudioEnabled, mapVolume, ytIframeId])
 
-  const unlockYoutubeMapAudio = useCallback(() => {
-    const p = ytPlayerRef.current
-    if (!p) return
-    try {
-      p.unMute()
-      p.playVideo()
-    } catch {
-      /* sin permiso o API no lista */
+  useEffect(() => {
+    if (!hasMedia || backgroundType !== 'video') return
+    if (youtubeParsed) {
+      try {
+        ytPlayerRef.current?.setVolume?.(mapVolume)
+      } catch {
+        /* opcional en typings */
+      }
+      if (mapAudioEnabled) {
+        try {
+          ytPlayerRef.current?.unMute()
+          ytPlayerRef.current?.playVideo()
+        } catch {
+          /* puede requerir interacción del navegador */
+        }
+      } else {
+        try {
+          ytPlayerRef.current?.mute?.()
+        } catch {
+          /* opcional en typings */
+        }
+      }
+      return
     }
-    setYoutubeAudioCue(false)
-  }, [])
+    const v = directMapVideoRef.current
+    if (v) {
+      v.volume = Math.max(0, Math.min(1, mapVolume / 100))
+      v.muted = !mapAudioEnabled
+      if (mapAudioEnabled) void v.play().catch(() => {})
+    }
+  }, [backgroundType, hasMedia, mapAudioEnabled, mapVolume, youtubeParsed])
 
-  const showMapAudioButton =
-    hasMedia &&
-    backgroundType === 'video' &&
-    ((youtubeParsed && youtubeAudioCue) || (!youtubeParsed && Boolean(directMapAudio?.muted)))
+  const updateRoomSettingAsDm = useCallback(
+    (partial: Partial<RoomState['settings']>) => {
+      if (!isDm) return
+      socket.emit('updateRoomSettings', partial)
+    },
+    [isDm, socket],
+  )
+
+  const updateRoomMapVolume = useCallback(
+    (next: number) => {
+      updateRoomSettingAsDm({
+        mapVolume: Math.min(100, Math.max(0, Math.round(next))),
+      })
+    },
+    [updateRoomSettingAsDm],
+  )
+
+  const toggleRoomMapAudio = useCallback(() => {
+    updateRoomSettingAsDm({ mapAudioEnabled: !mapAudioEnabled })
+  }, [mapAudioEnabled, updateRoomSettingAsDm])
+
+  const showMapAudioButton = isDm && hasMedia && backgroundType === 'video'
+  const showVolumeControl = isDm && hasMedia && backgroundType === 'video'
 
   const showInteractiveMap = !isDm || dmScreen === 'mesa'
 
   const getSpawnCenter = useCallback(
     () => ({
-      x: Math.round(dims.w / 2),
-      y: Math.round(dims.h / 2),
+      x: Math.round(boardDims.w / 2),
+      y: Math.round(boardDims.h / 2),
     }),
-    [dims.h, dims.w],
+    [boardDims.h, boardDims.w],
   )
 
   return (
@@ -328,7 +372,7 @@ export function MapBoard({
               >
                 <div
                   className="relative shrink-0 select-none"
-                  style={{ width: dims.w, height: dims.h }}
+                  style={{ width: boardDims.w, height: boardDims.h }}
                 >
                   {hasMedia && backgroundType === 'video' && youtubeParsed && ytEmbedSrc ? (
                     <iframe
@@ -347,6 +391,8 @@ export function MapBoard({
                     <DirectMapLoopVideo
                       key={backgroundUrl}
                       src={backgroundUrl}
+                      audioEnabled={mapAudioEnabled}
+                      volumePercent={mapVolume}
                       onLoadedMetadata={onVideoMeta}
                       onError={onVideoError}
                       onAudioState={onDirectMapAudioState}
@@ -398,16 +444,38 @@ export function MapBoard({
                 </div>
               </TransformComponent>
             </TransformWrapper>
-            {showMapAudioButton ? (
-              <div className="pointer-events-auto absolute bottom-3 right-3 z-[2000]">
-                <button
-                  type="button"
-                  aria-label="Activar audio del vídeo de mapa"
-                  className="font-vtt-display rounded-md border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--vtt-gold)] shadow-[0_4px_20px_rgba(0,0,0,0.45)] transition hover:border-[var(--vtt-gold-dim)] hover:text-[var(--vtt-gold)]"
-                  onClick={youtubeParsed ? unlockYoutubeMapAudio : () => directMapAudio?.unlock()}
-                >
-                  Activar audio del mapa
-                </button>
+            {showMapAudioButton || showVolumeControl ? (
+              <div className="pointer-events-auto absolute bottom-3 right-3 z-[2000] flex min-w-[15rem] flex-col gap-2 rounded-md border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] p-2 shadow-[0_4px_20px_rgba(0,0,0,0.45)]">
+                {showMapAudioButton ? (
+                  <button
+                    type="button"
+                    aria-label={
+                      mapAudioEnabled
+                        ? 'Desactivar audio del vídeo de mapa'
+                        : 'Activar audio del vídeo de mapa'
+                    }
+                    className="font-vtt-display rounded-md border border-[var(--vtt-border)] bg-[var(--vtt-surface-warm)] px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--vtt-gold)] transition hover:border-[var(--vtt-gold-dim)] hover:text-[var(--vtt-gold)]"
+                    onClick={toggleRoomMapAudio}
+                  >
+                    {mapAudioEnabled ? 'Desactivar audio del mapa' : 'Activar audio del mapa'}
+                  </button>
+                ) : null}
+                {showVolumeControl ? (
+                  <label className="flex items-center gap-2 text-xs text-[var(--vtt-text-muted)]">
+                    <span className="font-vtt-display shrink-0 uppercase tracking-wide">Vol</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={mapVolume}
+                      onChange={(e) => updateRoomMapVolume(Number(e.target.value))}
+                      className="w-full accent-[var(--vtt-gold)]"
+                      aria-label="Volumen del vídeo del mapa"
+                    />
+                    <span className="w-8 text-right text-[var(--vtt-text)]">{mapVolume}</span>
+                  </label>
+                ) : null}
               </div>
             ) : null}
           </div>

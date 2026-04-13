@@ -29,6 +29,9 @@ function parseUpdateSettings(payload: unknown): Partial<RoomState['settings']> |
     out.backgroundType = o.backgroundType
   if (typeof o.gridSize === 'number' && Number.isFinite(o.gridSize))
     out.gridSize = o.gridSize
+  if (typeof o.mapAudioEnabled === 'boolean') out.mapAudioEnabled = o.mapAudioEnabled
+  if (typeof o.mapVolume === 'number' && Number.isFinite(o.mapVolume))
+    out.mapVolume = o.mapVolume
   if (typeof o.snapToGrid === 'boolean') out.snapToGrid = o.snapToGrid
 
   return Object.keys(out).length > 0 ? out : null
@@ -109,6 +112,12 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     }
     if (typeof partial.gridSize === 'number') {
       room.settings.gridSize = Math.min(200, Math.max(8, Math.round(partial.gridSize)))
+    }
+    if (typeof partial.mapAudioEnabled === 'boolean') {
+      room.settings.mapAudioEnabled = partial.mapAudioEnabled
+    }
+    if (typeof partial.mapVolume === 'number') {
+      room.settings.mapVolume = Math.min(100, Math.max(0, Math.round(partial.mapVolume)))
     }
     if (typeof partial.snapToGrid === 'boolean') {
       room.settings.snapToGrid = partial.snapToGrid
