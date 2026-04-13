@@ -3,7 +3,9 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
 import { CharacterLobby } from '../components/lobby/CharacterLobby'
 import { MapBoard } from '../components/board/MapBoard'
+import { InitiativePanel } from '../components/initiative/InitiativePanel'
 import { MediaDock } from '../components/media/MediaDock'
+import { DicePanel } from '../components/dice/DicePanel'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { usePlayerSessionId } from '../hooks/usePlayerSessionId'
 import type { RoomState, Token } from '../types/room'
@@ -194,6 +196,37 @@ export function PlayRoom() {
     [socket],
   )
 
+  const isDm = session?.role === 'dm'
+
+  const onInitiativeToggleVisibility = useCallback(
+    (visible: boolean) => {
+      if (!socket || !isDm) return
+      socket.emit('initiativeToggleVisibility', { visible })
+    },
+    [isDm, socket],
+  )
+
+  const onInitiativeMove = useCallback(
+    (tokenId: string, direction: 'up' | 'down') => {
+      if (!socket || !isDm) return
+      socket.emit('initiativeMove', { tokenId, direction })
+    },
+    [isDm, socket],
+  )
+
+  const onInitiativeSetCurrent = useCallback(
+    (tokenId: string) => {
+      if (!socket || !isDm) return
+      socket.emit('initiativeSetCurrent', { tokenId })
+    },
+    [isDm, socket],
+  )
+
+  const onInitiativeNext = useCallback(() => {
+    if (!socket || !isDm) return
+    socket.emit('initiativeNext')
+  }, [isDm, socket])
+
   const showLobby =
     Boolean(state && session?.role === 'player' && !session.claimedTokenId)
 
@@ -278,7 +311,9 @@ export function PlayRoom() {
       <main
         id="contenido-sala"
         tabIndex={-1}
-        className="relative flex min-h-0 flex-1 flex-col items-center gap-6 outline-none"
+        className={`relative flex min-h-0 flex-1 flex-col items-center gap-6 outline-none ${
+          showMap ? 'pb-28' : ''
+        }`}
       >
         {passwordGate && roomId ? (
           <div
@@ -366,9 +401,25 @@ export function PlayRoom() {
             roomState={state}
             setRoomState={setState}
             canDragToken={canDragToken}
-            isDm={session?.role === 'dm'}
+            isDm={isDm}
           />
         )}
+
+        {showMap && state && socket && (
+          <InitiativePanel
+            initiative={state.initiative}
+            tokens={state.tokens.filter((t) => t.type === 'pc')}
+            isDm={isDm}
+            onToggleVisibility={onInitiativeToggleVisibility}
+            onMove={onInitiativeMove}
+            onSetCurrent={onInitiativeSetCurrent}
+            onNext={onInitiativeNext}
+          />
+        )}
+
+        {socket && state && session && (showLobby || showMap) ? (
+          <DicePanel socket={socket} roomState={state} />
+        ) : null}
 
         {joinPayload && state && !session && (
           <p className="text-sm text-[var(--vtt-text-muted)]" role="status" aria-live="polite">

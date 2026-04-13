@@ -13,6 +13,7 @@ import { clearTokenSocketsOnLeave } from './on-disconnect.js'
 import { getOrCreateRoom } from './rooms.js'
 import { clearMediaPeer, registerMediaHandlers } from './socket-media.js'
 import { registerClaimHandler } from './socket-claim.js'
+import { registerDiceHandlers } from './socket-dice.js'
 import { registerDmHandlers } from './socket-dm.js'
 import { registerTokenHandlers } from './socket-tokens.js'
 import type { VttSocketData } from './socket-data.js'
@@ -125,6 +126,7 @@ io.on('connection', (socket) => {
   registerTokenHandlers(io, socket)
   registerClaimHandler(io, socket)
   registerDmHandlers(io, socket)
+  registerDiceHandlers(io, socket)
   registerMediaHandlers(io, socket)
 })
 

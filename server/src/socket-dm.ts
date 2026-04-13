@@ -19,6 +19,22 @@ function assertDm(socket: Socket): boolean {
   return true
 }
 
+function syncInitiative(room: RoomState) {
+  const pcIds = room.tokens.filter((t) => t.type === 'pc').map((t) => t.id)
+  const pcSet = new Set(pcIds)
+  const filtered = room.initiative.order.filter((id) => pcSet.has(id))
+  const missing = pcIds.filter((id) => !filtered.includes(id))
+  room.initiative.order = [...filtered, ...missing]
+  if (room.initiative.order.length === 0) {
+    room.initiative.currentIndex = null
+    return
+  }
+  const idx = room.initiative.currentIndex
+  if (idx === null || idx < 0 || idx >= room.initiative.order.length) {
+    room.initiative.currentIndex = 0
+  }
+}
+
 function parseUpdateSettings(payload: unknown): Partial<RoomState['settings']> | null {
   if (typeof payload !== 'object' || payload === null) return null
   const o = payload as Record<string, unknown>
@@ -104,6 +120,7 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     }
 
     const room = getOrCreateRoom(roomId)
+    syncInitiative(room)
     if (typeof partial.backgroundUrl === 'string') {
       room.settings.backgroundUrl = partial.backgroundUrl
     }
@@ -123,6 +140,86 @@ export function registerDmHandlers(io: Server, socket: Socket) {
       room.settings.snapToGrid = partial.snapToGrid
     }
 
+    io.to(roomId).emit('roomState', publicRoomState(room))
+  })
+
+  socket.on('initiativeToggleVisibility', (payload: unknown) => {
+    if (!assertDm(socket)) return
+    const roomId = (socket.data as VttSocketData).roomId
+    if (!roomId) return
+    if (typeof payload !== 'object' || payload === null) return
+    const o = payload as Record<string, unknown>
+    if (typeof o.visible !== 'boolean') return
+
+    const room = getOrCreateRoom(roomId)
+    syncInitiative(room)
+    room.initiative.visible = o.visible
+    io.to(roomId).emit('roomState', publicRoomState(room))
+  })
+
+  socket.on('initiativeMove', (payload: unknown) => {
+    if (!assertDm(socket)) return
+    const roomId = (socket.data as VttSocketData).roomId
+    if (!roomId) return
+    if (typeof payload !== 'object' || payload === null) return
+    const o = payload as Record<string, unknown>
+    if (typeof o.tokenId !== 'string') return
+    const direction = o.direction
+    if (direction !== 'up' && direction !== 'down') return
+
+    const room = getOrCreateRoom(roomId)
+    syncInitiative(room)
+    const index = room.initiative.order.indexOf(o.tokenId)
+    if (index === -1) return
+
+    const target = direction === 'up' ? index - 1 : index + 1
+    if (target < 0 || target >= room.initiative.order.length) return
+
+    const currentTokenId =
+      room.initiative.currentIndex !== null
+        ? room.initiative.order[room.initiative.currentIndex]
+        : null
+
+    const tmp = room.initiative.order[index]
+    room.initiative.order[index] = room.initiative.order[target]
+    room.initiative.order[target] = tmp
+
+    if (currentTokenId) {
+      room.initiative.currentIndex = room.initiative.order.indexOf(currentTokenId)
+    }
+
+    io.to(roomId).emit('roomState', publicRoomState(room))
+  })
+
+  socket.on('initiativeNext', () => {
+    if (!assertDm(socket)) return
+    const roomId = (socket.data as VttSocketData).roomId
+    if (!roomId) return
+
+    const room = getOrCreateRoom(roomId)
+    syncInitiative(room)
+    if (room.initiative.order.length === 0) return
+    const nextIndex =
+      room.initiative.currentIndex === null
+        ? 0
+        : (room.initiative.currentIndex + 1) % room.initiative.order.length
+    room.initiative.currentIndex = nextIndex
+    io.to(roomId).emit('roomState', publicRoomState(room))
+  })
+
+  socket.on('initiativeSetCurrent', (payload: unknown) => {
+    if (!assertDm(socket)) return
+    const roomId = (socket.data as VttSocketData).roomId
+    if (!roomId) return
+    if (typeof payload !== 'object' || payload === null) return
+    const o = payload as Record<string, unknown>
+    if (typeof o.tokenId !== 'string') return
+
+    const room = getOrCreateRoom(roomId)
+    syncInitiative(room)
+    const index = room.initiative.order.indexOf(o.tokenId)
+    if (index === -1) return
+    room.initiative.currentIndex = index
     io.to(roomId).emit('roomState', publicRoomState(room))
   })
 
@@ -156,6 +253,7 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     }
 
     const room = getOrCreateRoom(roomId)
+    syncInitiative(room)
     io.to(roomId).emit('roomState', publicRoomState(room))
   })
 
@@ -171,6 +269,7 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     }
 
     const room = getOrCreateRoom(roomId)
+    syncInitiative(room)
     const slot = room.tokens.length
     const { x, y } = placeTokenXY(room, parsed.x, parsed.y, slot)
 
