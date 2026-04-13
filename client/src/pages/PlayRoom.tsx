@@ -12,6 +12,8 @@ import type { RoomState, Token } from '../types/room'
 import type { SessionState } from '../types/session'
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3000'
+const D20_ROLL_GIF =
+  'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbzJqN2d2cXVhbWd6c3ljMDl1N3pjazB4b3AzNTAzZjBiamxxOWJ2dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/oOBTO2UcSoaBJewZT0/giphy.gif'
 
 type TokenPosEvent = { tokenId: string; x: number; y: number }
 
@@ -68,19 +70,38 @@ export function PlayRoom() {
   const [passwordInput, setPasswordInput] = useState('')
   const [rememberSessionPwd, setRememberSessionPwd] = useState(false)
   const [rollFx, setRollFx] = useState<RoomState['diceLog'][number] | null>(null)
+  const [rollFxReveal, setRollFxReveal] = useState(false)
   const lastRollIdRef = useRef<string | null>(null)
   const rollFxTimerRef = useRef<number | null>(null)
+  const rollFxRevealTimerRef = useRef<number | null>(null)
+  const ROLL_REVEAL_MS = 2500
+  const ROLL_HIDE_MS = 3700
+  const SPECIAL_TEXT_HOLD_MS = 4000
   const triggerRollFx = useCallback((entry: RoomState['diceLog'][number]) => {
     lastRollIdRef.current = entry.id
+    setRollFxReveal(false)
     setRollFx(entry)
+    if (rollFxRevealTimerRef.current !== null) {
+      window.clearTimeout(rollFxRevealTimerRef.current)
+    }
+    rollFxRevealTimerRef.current = window.setTimeout(() => {
+      setRollFxReveal(true)
+      rollFxRevealTimerRef.current = null
+    }, ROLL_REVEAL_MS)
     if (rollFxTimerRef.current !== null) {
       window.clearTimeout(rollFxTimerRef.current)
     }
+    const isSpecialD20 =
+      entry.dieType === 'd20' && (entry.total === 20 || entry.total === 1)
+    const hideAfterMs = isSpecialD20
+      ? ROLL_REVEAL_MS + SPECIAL_TEXT_HOLD_MS
+      : ROLL_HIDE_MS
     rollFxTimerRef.current = window.setTimeout(() => {
       setRollFx(null)
+      setRollFxReveal(false)
       rollFxTimerRef.current = null
-    }, 1300)
-  }, [])
+    }, hideAfterMs)
+  }, [ROLL_HIDE_MS, ROLL_REVEAL_MS, SPECIAL_TEXT_HOLD_MS])
 
   useEffect(() => {
     if (!roomId) {
@@ -218,6 +239,9 @@ export function PlayRoom() {
 
   useEffect(
     () => () => {
+      if (rollFxRevealTimerRef.current !== null) {
+        window.clearTimeout(rollFxRevealTimerRef.current)
+      }
       if (rollFxTimerRef.current !== null) {
         window.clearTimeout(rollFxTimerRef.current)
       }
@@ -314,6 +338,12 @@ export function PlayRoom() {
       : session?.claimedTokenId
         ? 'Jugador en mesa'
         : 'Jugador, lobby de personajes'
+  const isCriticalD20 = Boolean(
+    rollFxReveal && rollFx && rollFx.dieType === 'd20' && rollFx.total === 20,
+  )
+  const isCriticalFailD20 = Boolean(
+    rollFxReveal && rollFx && rollFx.dieType === 'd20' && rollFx.total === 1,
+  )
 
   return (
     <div className="font-vtt-body flex min-h-svh flex-col gap-4 px-4 py-4 text-left md:px-6">
@@ -397,10 +427,30 @@ export function PlayRoom() {
         {rollFx ? (
           <div className="dice-roll-overlay" aria-hidden="true">
             <div className="dice-roll-overlay__panel">
-              <p className="dice-roll-overlay__title">Tirada en curso</p>
-              <p className="dice-roll-overlay__value">
-                {rollFx.roller}: {rollFx.dieType} = {rollFx.total}
+              <p className="dice-roll-overlay__title">
+                {rollFxReveal ? 'Resultado' : 'Tirada en curso'}
               </p>
+              {!rollFxReveal ? (
+                <>
+                  <img
+                    src={D20_ROLL_GIF}
+                    alt=""
+                    aria-hidden="true"
+                    className="dice-roll-overlay__gif"
+                  />
+                  <p className="dice-roll-overlay__value">d20...</p>
+                </>
+              ) : (
+                <>
+                  {isCriticalD20 ? <p className="dice-roll-overlay__critical">Critico</p> : null}
+                  {isCriticalFailD20 ? (
+                    <p className="dice-roll-overlay__critical-fail">Daño Critico</p>
+                  ) : null}
+                  <p className="dice-roll-overlay__value">
+                    {rollFx.roller}: {rollFx.dieType} = {rollFx.total}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         ) : null}
@@ -507,7 +557,9 @@ export function PlayRoom() {
           />
         )}
 
-        {canUseDicePanel ? <DicePanel socket={socket} roomState={state} /> : null}
+        {canUseDicePanel && socket && state ? (
+          <DicePanel socket={socket} roomState={state} />
+        ) : null}
 
         {joinPayload && state && !session && (
           <p className="text-sm text-[var(--vtt-text-muted)]" role="status" aria-live="polite">

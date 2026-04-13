@@ -25,6 +25,9 @@ export function InitiativePanel({
   onSetCurrent,
   onNext,
 }: InitiativePanelProps) {
+  const dockOffsetStyle = {
+    bottom: 'max(4.75rem, calc(env(safe-area-inset-bottom, 0px) + 4.75rem))',
+  } as const
   const tokenMap = new Map(tokens.map((t) => [t.id, t]))
   const rows = initiative.order
     .map((tokenId) => tokenMap.get(tokenId))
@@ -34,7 +37,10 @@ export function InitiativePanel({
 
   if (!initiative.visible && isDm) {
     return (
-      <section className="fixed inset-x-0 bottom-3 z-30 flex justify-center px-3">
+      <section
+        className="fixed inset-x-0 z-[88] flex justify-center px-3"
+        style={dockOffsetStyle}
+      >
         <div className="vtt-surface vtt-glow-border rounded-[var(--vtt-radius)] px-3 py-2">
           <button
             type="button"
@@ -49,7 +55,10 @@ export function InitiativePanel({
   }
 
   return (
-    <section className="fixed inset-x-0 bottom-3 z-30 flex justify-center px-3">
+    <section
+      className="fixed inset-x-0 z-[88] flex justify-center px-3"
+      style={dockOffsetStyle}
+    >
       <div className="vtt-surface vtt-glow-border w-full max-w-4xl rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg)]/95 p-3 backdrop-blur-sm">
         <div className="mb-2 flex items-center justify-between gap-3">
           <h3 className="font-vtt-display text-sm tracking-wide text-[var(--vtt-gold)]">Iniciativa</h3>

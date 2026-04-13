@@ -242,7 +242,7 @@ export function MapBoard({
       ytPlayerRef.current?.destroy()
       ytPlayerRef.current = null
     }
-  }, [backgroundUrl, backgroundType, hasMedia, mapAudioEnabled, mapVolume, ytIframeId])
+  }, [backgroundUrl, backgroundType, hasMedia, ytIframeId])
 
   useEffect(() => {
     if (!hasMedia || backgroundType !== 'video') return
