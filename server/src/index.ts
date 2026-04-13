@@ -11,6 +11,7 @@ import {
 } from './room-session-password.js'
 import { clearTokenSocketsOnLeave } from './on-disconnect.js'
 import { getOrCreateRoom } from './rooms.js'
+import { clearMediaPeer, registerMediaHandlers } from './socket-media.js'
 import { registerClaimHandler } from './socket-claim.js'
 import { registerDmHandlers } from './socket-dm.js'
 import { registerTokenHandlers } from './socket-tokens.js'
@@ -22,6 +23,38 @@ const corsOrigin = createCorsOrigin()
 const app = express()
 app.use(cors({ origin: corsOrigin, credentials: true }))
 app.use(express.json())
+
+app.get('/', (_req, res) => {
+  const wantsJson = _req.headers.accept?.includes('application/json')
+  if (wantsJson) {
+    res.json({
+      service: 'd20-vtt',
+      hint: 'API Socket.io; el cliente web suele ir en otro puerto (p. ej. 5173).',
+      endpoints: { health: '/health' },
+    })
+    return
+  }
+  res.type('html').send(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>d20 — servidor de mesa</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 36rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; color: #e8e4dc; background: #1a1814; }
+    a { color: #c9a44c; }
+    code { background: #2a2620; padding: 0.15em 0.4em; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>d20 — servidor</h1>
+  <p>Este puerto es el <strong>backend</strong> (Express + Socket.io). La interfaz del juego la sirve Vite en desarrollo:</p>
+  <p><code>npm run dev --prefix client</code> → suele ser <a href="http://localhost:5173">http://localhost:5173</a></p>
+  <p>O desde la raíz del repo: <code>npm run dev</code> (cliente + servidor).</p>
+  <p>Estado: <a href="/health">/health</a></p>
+</body>
+</html>`)
+})
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true })
@@ -38,6 +71,7 @@ const io = new Server(httpServer, {
 
 io.on('connection', (socket) => {
   socket.on('disconnect', () => {
+    clearMediaPeer(socket)
     clearTokenSocketsOnLeave(socket)
   })
 
@@ -91,6 +125,7 @@ io.on('connection', (socket) => {
   registerTokenHandlers(io, socket)
   registerClaimHandler(io, socket)
   registerDmHandlers(io, socket)
+  registerMediaHandlers(io, socket)
 })
 
 httpServer.listen(PORT, () => {

@@ -3,6 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
 import { CharacterLobby } from '../components/lobby/CharacterLobby'
 import { MapBoard } from '../components/board/MapBoard'
+import { MediaDock } from '../components/media/MediaDock'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { usePlayerSessionId } from '../hooks/usePlayerSessionId'
 import type { RoomState, Token } from '../types/room'
@@ -334,6 +335,21 @@ export function PlayRoom() {
             Preparando sesión…
           </p>
         )}
+
+        {socket && session && state && (showLobby || showMap) ? (
+          <div
+            className={
+              showMap ? 'contents' : 'w-full max-w-6xl shrink-0 px-0'
+            }
+          >
+            <MediaDock
+              socket={socket}
+              session={session}
+              roomState={state}
+              layout={showMap ? 'map' : 'lobby'}
+            />
+          </div>
+        ) : null}
 
         {showLobby && state && playerSessionId && (
           <CharacterLobby
