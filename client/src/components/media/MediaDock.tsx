@@ -87,11 +87,13 @@ function VideoThumb({
   name,
   muted,
   compact,
+  featured,
 }: {
   stream: MediaStream
   name: string
   muted?: boolean
   compact: boolean
+  featured?: boolean
 }) {
   const ref = useRef<HTMLVideoElement>(null)
   useEffect(() => {
@@ -108,7 +110,9 @@ function VideoThumb({
     <div
       className={
         compact
-          ? 'relative h-[6.25rem] w-[10rem] shrink-0 overflow-hidden rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-black shadow-[0_6px_24px_rgba(0,0,0,0.55)] ring-1 ring-[rgba(201,164,58,0.12)]'
+          ? featured
+            ? 'relative h-[7.5rem] w-[12rem] shrink-0 overflow-hidden rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-black shadow-[0_6px_24px_rgba(0,0,0,0.55)] ring-1 ring-[rgba(201,164,58,0.12)]'
+            : 'relative h-[6.25rem] w-[10rem] shrink-0 overflow-hidden rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-black shadow-[0_6px_24px_rgba(0,0,0,0.55)] ring-1 ring-[rgba(201,164,58,0.12)]'
           : 'relative aspect-video w-[min(100%,11rem)] shrink-0 overflow-hidden rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-black shadow-[0_6px_24px_rgba(0,0,0,0.45)] ring-1 ring-[rgba(201,164,58,0.1)]'
       }
     >
@@ -536,6 +540,7 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
               name={mapParticipants.top.label}
               muted={mapParticipants.top.muted}
               compact
+              featured
             />
           </div>
         ) : null}
