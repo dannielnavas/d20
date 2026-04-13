@@ -75,7 +75,7 @@ export function registerDiceHandlers(io: Server, socket: Socket) {
     const result = rollDice(parsed.dieType, parsed.mode)
     const roller = getRollerName(room, data)
 
-    room.diceLog.unshift({
+    const entry = {
       id: `roll-${randomUUID().replace(/-/g, '').slice(0, 16)}`,
       roller,
       dieType: parsed.dieType,
@@ -83,11 +83,28 @@ export function registerDiceHandlers(io: Server, socket: Socket) {
       rolls: result.rolls,
       total: result.total,
       timestamp: Date.now(),
-    })
+    }
+
+    room.diceLog.unshift(entry)
     if (room.diceLog.length > DICE_LOG_LIMIT) {
       room.diceLog = room.diceLog.slice(0, DICE_LOG_LIMIT)
     }
 
+    io.to(roomId).emit('diceRolled', entry)
+    io.to(roomId).emit('roomState', publicRoomState(room))
+  })
+
+  socket.on('diceLogReset', () => {
+    const data = socket.data as VttSocketData
+    const roomId = data.roomId
+    if (!roomId) return
+    if (!data.isDm) {
+      socket.emit('dmError', { message: 'Solo el DM puede limpiar el historial de dados' })
+      return
+    }
+
+    const room = getOrCreateRoom(roomId)
+    room.diceLog = []
     io.to(roomId).emit('roomState', publicRoomState(room))
   })
 }

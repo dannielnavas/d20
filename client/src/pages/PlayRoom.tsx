@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
 import { CharacterLobby } from '../components/lobby/CharacterLobby'
@@ -31,6 +31,23 @@ function parseSessionState(payload: unknown): SessionState | null {
   }
 }
 
+function parseDiceLogEntry(payload: unknown): RoomState['diceLog'][number] | null {
+  if (typeof payload !== 'object' || payload === null) return null
+  const o = payload as Record<string, unknown>
+  if (
+    typeof o.id !== 'string' ||
+    typeof o.roller !== 'string' ||
+    typeof o.dieType !== 'string' ||
+    typeof o.mode !== 'string' ||
+    !Array.isArray(o.rolls) ||
+    typeof o.total !== 'number' ||
+    typeof o.timestamp !== 'number'
+  ) {
+    return null
+  }
+  return o as RoomState['diceLog'][number]
+}
+
 export function PlayRoom() {
   const { roomId = '' } = useParams<{ roomId: string }>()
   const [searchParams] = useSearchParams()
@@ -50,6 +67,20 @@ export function PlayRoom() {
   const [passwordGate, setPasswordGate] = useState(false)
   const [passwordInput, setPasswordInput] = useState('')
   const [rememberSessionPwd, setRememberSessionPwd] = useState(false)
+  const [rollFx, setRollFx] = useState<RoomState['diceLog'][number] | null>(null)
+  const lastRollIdRef = useRef<string | null>(null)
+  const rollFxTimerRef = useRef<number | null>(null)
+  const triggerRollFx = useCallback((entry: RoomState['diceLog'][number]) => {
+    lastRollIdRef.current = entry.id
+    setRollFx(entry)
+    if (rollFxTimerRef.current !== null) {
+      window.clearTimeout(rollFxTimerRef.current)
+    }
+    rollFxTimerRef.current = window.setTimeout(() => {
+      setRollFx(null)
+      rollFxTimerRef.current = null
+    }, 1300)
+  }, [])
 
   useEffect(() => {
     if (!roomId) {
@@ -130,6 +161,11 @@ export function PlayRoom() {
       if (parsed) setSession(parsed)
       setClaimingId(null)
     }
+    const onDiceRolled = (raw: unknown) => {
+      const parsed = parseDiceLogEntry(raw)
+      if (!parsed) return
+      triggerRollFx(parsed)
+    }
 
     s.on('connect', onConnect)
     s.on('disconnect', onDisconnect)
@@ -139,6 +175,7 @@ export function PlayRoom() {
     s.on('claimError', onClaimError)
     s.on('dmError', onDmError)
     s.on('sessionState', onSessionState)
+    s.on('diceRolled', onDiceRolled)
     s.on('tokenMove', onTokenMove)
     s.on('tokenMoveEnd', onTokenMoveEnd)
 
@@ -153,19 +190,40 @@ export function PlayRoom() {
       s.off('claimError', onClaimError)
       s.off('dmError', onDmError)
       s.off('sessionState', onSessionState)
+      s.off('diceRolled', onDiceRolled)
       s.off('tokenMove', onTokenMove)
       s.off('tokenMoveEnd', onTokenMoveEnd)
       s.disconnect()
       setSocket(null)
       setConnected(false)
     }
-  }, [joinPayload])
+  }, [joinPayload, triggerRollFx])
 
   useEffect(() => {
     if (passwordGate) {
       setPasswordInput(appliedSessionPassword)
     }
   }, [appliedSessionPassword, passwordGate])
+
+  useEffect(() => {
+    const latest = state?.diceLog?.[0]
+    if (!latest) return
+    if (lastRollIdRef.current === null) {
+      triggerRollFx(latest)
+      return
+    }
+    if (lastRollIdRef.current === latest.id) return
+    triggerRollFx(latest)
+  }, [state?.diceLog, triggerRollFx])
+
+  useEffect(
+    () => () => {
+      if (rollFxTimerRef.current !== null) {
+        window.clearTimeout(rollFxTimerRef.current)
+      }
+    },
+    [],
+  )
 
   const submitSessionPassword = useCallback(() => {
     if (!roomId) return
@@ -227,6 +285,11 @@ export function PlayRoom() {
     socket.emit('initiativeNext')
   }, [isDm, socket])
 
+  const onResetDiceLog = useCallback(() => {
+    if (!socket || !isDm) return
+    socket.emit('diceLogReset')
+  }, [isDm, socket])
+
   const showLobby =
     Boolean(state && session?.role === 'player' && !session.claimedTokenId)
 
@@ -238,6 +301,12 @@ export function PlayRoom() {
     )
 
   const pcs = state?.tokens.filter((t) => t.type === 'pc') ?? []
+  const canUseDicePanel = Boolean(
+    socket &&
+      state &&
+      showMap &&
+      (session?.role === 'dm' || (session?.role === 'player' && session.claimedTokenId)),
+  )
 
   const sessionLabel =
     session?.role === 'dm'
@@ -267,6 +336,16 @@ export function PlayRoom() {
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-4">
+          {isDm ? (
+            <button
+              type="button"
+              className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--vtt-text)] hover:border-[var(--vtt-gold)] disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={onResetDiceLog}
+              disabled={!state || state.diceLog.length === 0}
+            >
+              Reset log dados
+            </button>
+          ) : null}
           <ThemeToggle />
           <div
             role="status"
@@ -315,6 +394,17 @@ export function PlayRoom() {
           showMap ? 'pb-28' : ''
         }`}
       >
+        {rollFx ? (
+          <div className="dice-roll-overlay" aria-hidden="true">
+            <div className="dice-roll-overlay__panel">
+              <p className="dice-roll-overlay__title">Tirada en curso</p>
+              <p className="dice-roll-overlay__value">
+                {rollFx.roller}: {rollFx.dieType} = {rollFx.total}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         {passwordGate && roomId ? (
           <div
             className="absolute inset-0 z-20 flex items-start justify-center overflow-y-auto bg-[var(--vtt-bg)]/90 px-4 py-10 backdrop-blur-sm"
@@ -417,9 +507,7 @@ export function PlayRoom() {
           />
         )}
 
-        {socket && state && session && (showLobby || showMap) ? (
-          <DicePanel socket={socket} roomState={state} />
-        ) : null}
+        {canUseDicePanel ? <DicePanel socket={socket} roomState={state} /> : null}
 
         {joinPayload && state && !session && (
           <p className="text-sm text-[var(--vtt-text-muted)]" role="status" aria-live="polite">
