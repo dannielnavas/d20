@@ -20,7 +20,7 @@ type MediaDockProps = {
   layout: MediaDockLayout
 }
 
-type RemoteTile = { stream: MediaStream; label: string }
+type RemoteTile = { stream: MediaStream; label: string; avatarUrl: string | null }
 
 function iceServers(): RTCIceServer[] {
   const raw = import.meta.env.VITE_STUN_URLS as string | undefined
@@ -40,6 +40,14 @@ function localDisplayName(session: SessionState, roomState: RoomState): string {
   if (!id) return 'Jugador'
   const t = roomState.tokens.find((x) => x.id === id)
   return t?.name ?? 'Jugador'
+}
+
+function localAvatarUrl(session: SessionState, roomState: RoomState): string | null {
+  if (session.role === 'dm') return null
+  const id = session.claimedTokenId
+  if (!id) return null
+  const t = roomState.tokens.find((x) => x.id === id)
+  return t?.img ?? null
 }
 
 type IconBtnProps = {
@@ -85,12 +93,14 @@ function MediaIconBtn({
 function VideoThumb({
   stream,
   name,
+  avatarUrl,
   muted,
   compact,
   featured,
 }: {
   stream: MediaStream
   name: string
+  avatarUrl?: string | null
   muted?: boolean
   compact: boolean
   featured?: boolean
@@ -116,14 +126,29 @@ function VideoThumb({
           : 'relative aspect-video w-[min(100%,11rem)] shrink-0 overflow-hidden rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-black shadow-[0_6px_24px_rgba(0,0,0,0.45)] ring-1 ring-[rgba(201,164,58,0.1)]'
       }
     >
-      <video
-        ref={ref}
-        className="h-full w-full object-cover"
-        playsInline
-        muted={muted}
-        autoPlay
-        aria-label={name}
-      />
+      <div className="flex h-full w-full items-stretch">
+        <div className="flex w-9 shrink-0 items-center justify-center border-r border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span className="font-vtt-display text-[0.58rem] uppercase tracking-[0.12em] text-[var(--vtt-gold-dim)]">
+              {name.slice(0, 2)}
+            </span>
+          )}
+        </div>
+        <video
+          ref={ref}
+          className="h-full min-w-0 flex-1 object-cover"
+          playsInline
+          muted={muted}
+          autoPlay
+          aria-label={name}
+        />
+      </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-1 pb-1 pt-4">
         <p className="truncate text-center font-vtt-display text-[0.55rem] font-semibold uppercase tracking-[0.22em] text-[var(--vtt-gold)]">
           {name}
@@ -138,8 +163,14 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
     () => localDisplayName(session, roomState),
     [session, roomState],
   )
+  const avatarUrl = useMemo(
+    () => localAvatarUrl(session, roomState),
+    [session, roomState],
+  )
   const labelRef = useRef(label)
   labelRef.current = label
+  const avatarRef = useRef<string | null>(avatarUrl)
+  avatarRef.current = avatarUrl
 
   const [inCall, setInCall] = useState(false)
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
@@ -151,6 +182,7 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
   const pcsRef = useRef(new Map<string, RTCPeerConnection>())
   const iceBufRef = useRef(new Map<string, RTCIceCandidateInit[]>())
   const labelsRef = useRef(new Map<string, string>())
+  const avatarsRef = useRef(new Map<string, string | null>())
   const localStreamRef = useRef<MediaStream | null>(null)
   localStreamRef.current = localStream
 
@@ -160,6 +192,7 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
       [peerId]: {
         stream,
         label: labelsRef.current.get(peerId) ?? 'Participante',
+        avatarUrl: avatarsRef.current.get(peerId) ?? null,
       },
     }))
   }, [])
@@ -189,6 +222,7 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
     pcsRef.current.clear()
     iceBufRef.current.clear()
     labelsRef.current.clear()
+    avatarsRef.current.clear()
     setRemotes({})
   }, [])
 
@@ -229,12 +263,16 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
     if (!inCall || !localStream) return
 
     const onSnapshot = async (msg: {
-      peers: { peerId: string; displayName: string }[]
+      peers: { peerId: string; displayName: string; avatarUrl?: string | null }[]
     }) => {
       const stream = localStreamRef.current
       if (!stream) return
       for (const p of msg.peers) {
         labelsRef.current.set(p.peerId, p.displayName)
+        avatarsRef.current.set(
+          p.peerId,
+          typeof p.avatarUrl === 'string' && p.avatarUrl.length > 0 ? p.avatarUrl : null,
+        )
         try {
           const pc = getOrCreatePc(p.peerId)
           const senders = pc.getSenders()
@@ -255,13 +293,30 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
       }
     }
 
-    const onPeerJoined = (msg: { peerId: string; displayName: string }) => {
+    const onPeerJoined = (msg: {
+      peerId: string
+      displayName: string
+      avatarUrl?: string | null
+    }) => {
       labelsRef.current.set(msg.peerId, msg.displayName)
+      avatarsRef.current.set(
+        msg.peerId,
+        typeof msg.avatarUrl === 'string' && msg.avatarUrl.length > 0 ? msg.avatarUrl : null,
+      )
       setRemotes((prev) => {
         if (!prev[msg.peerId]) return prev
         return {
           ...prev,
-          [msg.peerId]: { ...prev[msg.peerId], label: msg.displayName },
+          [
+            msg.peerId
+          ]: {
+            ...prev[msg.peerId],
+            label: msg.displayName,
+            avatarUrl:
+              typeof msg.avatarUrl === 'string' && msg.avatarUrl.length > 0
+                ? msg.avatarUrl
+                : null,
+          },
         }
       })
     }
@@ -274,6 +329,7 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
       }
       iceBufRef.current.delete(msg.peerId)
       labelsRef.current.delete(msg.peerId)
+      avatarsRef.current.delete(msg.peerId)
       removeRemote(msg.peerId)
     }
 
@@ -354,7 +410,10 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
     socket.on('mediaError', onMediaErr)
     socket.on('disconnect', onDisconnect)
 
-    socket.emit('mediaJoin', { displayName: labelRef.current })
+    socket.emit('mediaJoin', {
+      displayName: labelRef.current,
+      avatarUrl: avatarRef.current,
+    })
 
     return () => {
       socket.off('mediaPeersSnapshot', onSnapshot)
@@ -424,13 +483,15 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
       isDm: session.role === 'dm',
       stream: localStream,
       muted: true,
+      avatarUrl,
     }
-    const rem = remoteEntries.map(([id, { label: remoteLabel, stream }]) => ({
+    const rem = remoteEntries.map(([id, { label: remoteLabel, stream, avatarUrl: remoteAvatar }]) => ({
       id,
       label: remoteLabel,
       isDm: remoteLabel.trim().toLowerCase() === 'dm',
       stream,
       muted: false,
+      avatarUrl: remoteAvatar,
     }))
     const all = [local, ...rem]
     const dm = all.find((p) => p.isDm) ?? null
@@ -504,9 +565,21 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
       <div
         className={`vtt-media-filmstrip flex gap-2 ${compact ? 'overflow-x-auto pb-1 pt-1' : 'flex-wrap justify-center py-2'}`}
       >
-        <VideoThumb stream={localStream} name={`Tú · ${label}`} muted compact={compact} />
-        {remoteEntries.map(([peerId, { stream, label: remoteLabel }]) => (
-          <VideoThumb key={peerId} stream={stream} name={remoteLabel} compact={compact} />
+        <VideoThumb
+          stream={localStream}
+          name={`Tú · ${label}`}
+          avatarUrl={avatarUrl}
+          muted
+          compact={compact}
+        />
+        {remoteEntries.map(([peerId, { stream, label: remoteLabel, avatarUrl: remoteAvatar }]) => (
+          <VideoThumb
+            key={peerId}
+            stream={stream}
+            name={remoteLabel}
+            avatarUrl={remoteAvatar}
+            compact={compact}
+          />
         ))}
       </div>
     ) : null
@@ -538,6 +611,7 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
             <VideoThumb
               stream={mapParticipants.top.stream}
               name={mapParticipants.top.label}
+              avatarUrl={mapParticipants.top.avatarUrl}
               muted={mapParticipants.top.muted}
               compact
               featured
@@ -550,6 +624,7 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
             <VideoThumb
               stream={mapParticipants.left.stream}
               name={mapParticipants.left.label}
+              avatarUrl={mapParticipants.left.avatarUrl}
               muted={mapParticipants.left.muted}
               compact
             />
@@ -561,6 +636,7 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
             <VideoThumb
               stream={mapParticipants.right.stream}
               name={mapParticipants.right.label}
+              avatarUrl={mapParticipants.right.avatarUrl}
               muted={mapParticipants.right.muted}
               compact
             />

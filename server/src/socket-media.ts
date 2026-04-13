@@ -47,19 +47,24 @@ export function registerMediaHandlers(io: Server, socket: Socket) {
     }
 
     let displayName = 'Participante'
+    let avatarUrl: string | null = null
     if (typeof payload === 'object' && payload !== null) {
       const o = payload as Record<string, unknown>
       if (typeof o.displayName === 'string' && o.displayName.trim()) {
         displayName = o.displayName.trim().slice(0, 48)
       }
+      if (typeof o.avatarUrl === 'string' && o.avatarUrl.trim()) {
+        avatarUrl = o.avatarUrl.trim().slice(0, 2000)
+      }
     }
 
-    const { others } = mediaPeerJoin(roomId, socket.id, displayName)
+    const { others } = mediaPeerJoin(roomId, socket.id, displayName, avatarUrl)
 
     socket.emit('mediaPeersSnapshot', { peers: others })
     socket.to(roomId).emit('mediaPeerJoined', {
       peerId: socket.id,
       displayName: displayName.trim().slice(0, 48) || 'Participante',
+      avatarUrl,
     })
   })
 

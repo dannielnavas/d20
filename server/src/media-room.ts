@@ -1,7 +1,9 @@
-/** Participantes con av activo por sala (socketId → nombre mostrado). */
-const roomMediaPeers = new Map<string, Map<string, string>>()
+type MediaPeerInfo = { displayName: string; avatarUrl: string | null }
 
-function getMap(roomId: string): Map<string, string> {
+/** Participantes con AV activo por sala (socketId → metadatos). */
+const roomMediaPeers = new Map<string, Map<string, MediaPeerInfo>>()
+
+function getMap(roomId: string): Map<string, MediaPeerInfo> {
   let m = roomMediaPeers.get(roomId)
   if (!m) {
     m = new Map()
@@ -14,13 +16,20 @@ export function mediaPeerJoin(
   roomId: string,
   socketId: string,
   displayName: string,
-): { others: { peerId: string; displayName: string }[] } {
+  avatarUrl?: string | null,
+): { others: { peerId: string; displayName: string; avatarUrl: string | null }[] } {
   const m = getMap(roomId)
   const trimmed = displayName.trim().slice(0, 48) || 'Participante'
-  m.set(socketId, trimmed)
-  const others: { peerId: string; displayName: string }[] = []
-  for (const [id, name] of m) {
-    if (id !== socketId) others.push({ peerId: id, displayName: name })
+  const avatar =
+    typeof avatarUrl === 'string' && avatarUrl.trim().length > 0
+      ? avatarUrl.trim().slice(0, 2000)
+      : null
+  m.set(socketId, { displayName: trimmed, avatarUrl: avatar })
+  const others: { peerId: string; displayName: string; avatarUrl: string | null }[] = []
+  for (const [id, info] of m) {
+    if (id !== socketId) {
+      others.push({ peerId: id, displayName: info.displayName, avatarUrl: info.avatarUrl })
+    }
   }
   return { others }
 }

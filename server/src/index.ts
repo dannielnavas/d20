@@ -2,6 +2,7 @@ import cors from 'cors'
 import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
+import { registerAutomationApi } from './automation.js'
 import { createCorsOrigin } from './cors-config.js'
 import { applyJoinSession, parseJoinPayload } from './join-handlers.js'
 import {
@@ -69,6 +70,7 @@ const io = new Server(httpServer, {
     credentials: true,
   },
 })
+registerAutomationApi(app, io)
 
 io.on('connection', (socket) => {
   socket.on('disconnect', () => {
