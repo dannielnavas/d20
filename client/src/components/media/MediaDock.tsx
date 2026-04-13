@@ -108,7 +108,7 @@ function VideoThumb({
     <div
       className={
         compact
-          ? 'relative h-[4.75rem] w-[7.5rem] shrink-0 overflow-hidden rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-black shadow-[0_6px_24px_rgba(0,0,0,0.55)] ring-1 ring-[rgba(201,164,58,0.12)]'
+          ? 'relative h-[6.25rem] w-[10rem] shrink-0 overflow-hidden rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-black shadow-[0_6px_24px_rgba(0,0,0,0.55)] ring-1 ring-[rgba(201,164,58,0.12)]'
           : 'relative aspect-video w-[min(100%,11rem)] shrink-0 overflow-hidden rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-black shadow-[0_6px_24px_rgba(0,0,0,0.45)] ring-1 ring-[rgba(201,164,58,0.1)]'
       }
     >
@@ -412,6 +412,33 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
   const remoteEntries = Object.entries(remotes)
   const compact = layout === 'map'
 
+  const mapParticipants = useMemo(() => {
+    if (!inCall || !localStream) return null
+    const local = {
+      id: 'local',
+      label,
+      isDm: session.role === 'dm',
+      stream: localStream,
+      muted: true,
+    }
+    const rem = remoteEntries.map(([id, { label: remoteLabel, stream }]) => ({
+      id,
+      label: remoteLabel,
+      isDm: remoteLabel.trim().toLowerCase() === 'dm',
+      stream,
+      muted: false,
+    }))
+    const all = [local, ...rem]
+    const dm = all.find((p) => p.isDm) ?? null
+    const players = all.filter((p) => !p.isDm)
+    return {
+      top: dm ?? players[0] ?? null,
+      left: dm ? players[0] ?? null : players[1] ?? null,
+      right: dm ? players[1] ?? null : players[2] ?? null,
+      hiddenPlayers: Math.max(0, players.length - (dm ? 2 : 3)),
+    }
+  }, [inCall, label, localStream, remoteEntries, session.role])
+
   const toolbar = (
     <div
       className="flex flex-wrap items-center justify-center gap-2"
@@ -492,14 +519,61 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
 
   if (layout === 'map') {
     return (
-      <div
-        className="vtt-media-dock-map-shell pointer-events-auto fixed inset-x-0 bottom-0 z-[85]"
-        style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 0px))' }}
-        aria-label="Mesa de voz y cámara"
-      >
-        {errBlock}
-        {filmstrip}
-        <div className="border-t border-[var(--vtt-border-subtle)] px-3 py-2">{toolbar}</div>
+      <div className="pointer-events-none fixed inset-0 z-[86]" aria-label="Mesa de voz y cámara">
+        {mediaErr ? (
+          <p
+            role="alert"
+            className="pointer-events-auto absolute left-1/2 top-3 z-[87] -translate-x-1/2 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-danger-border)] bg-[var(--vtt-danger-bg)] px-3 py-1.5 text-xs text-[var(--vtt-danger-text)]"
+          >
+            {mediaErr}
+          </p>
+        ) : null}
+
+        {mapParticipants?.top ? (
+          <div className="absolute left-1/2 top-3 z-[86] -translate-x-1/2">
+            <VideoThumb
+              stream={mapParticipants.top.stream}
+              name={mapParticipants.top.label}
+              muted={mapParticipants.top.muted}
+              compact
+            />
+          </div>
+        ) : null}
+
+        {mapParticipants?.left ? (
+          <div className="absolute left-3 top-1/2 z-[86] -translate-y-1/2">
+            <VideoThumb
+              stream={mapParticipants.left.stream}
+              name={mapParticipants.left.label}
+              muted={mapParticipants.left.muted}
+              compact
+            />
+          </div>
+        ) : null}
+
+        {mapParticipants?.right ? (
+          <div className="absolute right-3 top-1/2 z-[86] -translate-y-1/2">
+            <VideoThumb
+              stream={mapParticipants.right.stream}
+              name={mapParticipants.right.label}
+              muted={mapParticipants.right.muted}
+              compact
+            />
+          </div>
+        ) : null}
+
+        {mapParticipants && mapParticipants.hiddenPlayers > 0 ? (
+          <div className="absolute right-4 top-[calc(50%+4.4rem)] z-[86] rounded-full border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] px-2 py-1 font-vtt-display text-[0.62rem] uppercase tracking-[0.18em] text-[var(--vtt-text-muted)]">
+            +{mapParticipants.hiddenPlayers}
+          </div>
+        ) : null}
+
+        <div
+          className="vtt-media-dock-map-shell pointer-events-auto absolute bottom-0 left-1/2 z-[87] w-[min(20rem,calc(100vw-1rem))] -translate-x-1/2 rounded-t-[var(--vtt-radius)] px-2 py-2"
+          style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 0px))' }}
+        >
+          {toolbar}
+        </div>
       </div>
     )
   }
