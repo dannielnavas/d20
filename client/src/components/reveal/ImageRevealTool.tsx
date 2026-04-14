@@ -9,7 +9,11 @@ type ImageRevealToolProps = {
   embedded?: boolean
 }
 
-export function ImageRevealTool({ socket, variant = 'dm', embedded = false }: ImageRevealToolProps) {
+export function ImageRevealTool({
+  socket,
+  variant = 'dm',
+  embedded = false,
+}: ImageRevealToolProps) {
   const id = useId()
   const inputId = `${id}-url`
   const [url, setUrl] = useState('')
@@ -39,7 +43,8 @@ export function ImageRevealTool({ socket, variant = 'dm', embedded = false }: Im
         </p>
       )}
       <p className="text-[0.65rem] leading-relaxed text-[var(--vtt-text-muted)]">
-        Todos ven la imagen en un modal centrado unos 10 s. Solo enlaces http(s), sin subir archivos.
+        Todos ven la imagen en un modal centrado unos 10 s. Solo enlaces http(s), sin subir
+        archivos.
       </p>
       <div className="flex flex-col gap-2">
         <label htmlFor={inputId} className="sr-only">

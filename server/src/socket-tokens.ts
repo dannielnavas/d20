@@ -62,7 +62,8 @@ export function registerTokenHandlers(io: Server, socket: Socket) {
     if (!canMoveToken(socket, token)) {
       socket.emit('tokenError', {
         tokenId: parsed.tokenId,
-        message: 'No puedes mover esa ficha: la controla otro jugador o es un personaje no jugador.',
+        message:
+          'No puedes mover esa ficha: la controla otro jugador o es un personaje no jugador.',
       })
       return
     }
@@ -108,7 +109,8 @@ export function registerTokenHandlers(io: Server, socket: Socket) {
     if (!canMoveToken(socket, token)) {
       socket.emit('tokenError', {
         tokenId: parsed.tokenId,
-        message: 'No puedes mover esa ficha: la controla otro jugador o es un personaje no jugador.',
+        message:
+          'No puedes mover esa ficha: la controla otro jugador o es un personaje no jugador.',
       })
       return
     }

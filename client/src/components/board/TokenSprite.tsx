@@ -39,8 +39,7 @@ export function TokenSprite({
   }
 
   const conds = token.conditions?.filter(Boolean) ?? []
-  const conditionsAria =
-    conds.length > 0 ? ` Estados: ${conds.join(', ')}.` : ''
+  const conditionsAria = conds.length > 0 ? ` Estados: ${conds.join(', ')}.` : ''
   const badgeSize = Math.max(14, Math.min(22, Math.round(token.size * 0.28)))
 
   const circleClass = `relative touch-none rounded-full border-2 border-[var(--vtt-border)] bg-[var(--vtt-surface)] shadow-[0_4px_14px_rgba(0,0,0,0.45)] focus-visible:z-[1001] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vtt-gold)] ${
@@ -49,20 +48,17 @@ export function TokenSprite({
       : 'z-[10]'
   }`
 
-  const nameBlock =
-    showNameLabel ? (
-      <span
-        className="pointer-events-none z-[5] mt-0.5 max-w-[min(10rem,40vw)] truncate rounded bg-black/75 px-1.5 py-px text-center font-vtt-display text-[0.65rem] font-semibold leading-tight text-[var(--vtt-gold)] shadow-sm ring-1 ring-black/40"
-        aria-hidden
-      >
-        {token.name}
-      </span>
-    ) : null
+  const nameBlock = showNameLabel ? (
+    <span
+      className="pointer-events-none z-[5] mt-0.5 max-w-[min(10rem,40vw)] truncate rounded bg-black/75 px-1.5 py-px text-center font-vtt-display text-[0.65rem] font-semibold leading-tight text-[var(--vtt-gold)] shadow-sm ring-1 ring-black/40"
+      aria-hidden
+    >
+      {token.name}
+    </span>
+  ) : null
 
   const reactionEmoji =
-    reactionBurst !== null
-      ? (getQuickReaction(reactionBurst.reactionId)?.emoji ?? '✨')
-      : null
+    reactionBurst !== null ? (getQuickReaction(reactionBurst.reactionId)?.emoji ?? '✨') : null
 
   const inner = (
     <>
@@ -125,7 +121,10 @@ export function TokenSprite({
         className="pointer-events-none relative z-[25] mb-0.5 flex min-h-[3rem] w-full items-end justify-center"
         aria-hidden
       >
-        <span key={reactionBurst.key} className="vtt-token-reaction-float text-[1.85rem] leading-none">
+        <span
+          key={reactionBurst.key}
+          className="vtt-token-reaction-float text-[1.85rem] leading-none"
+        >
           {reactionEmoji}
         </span>
       </div>

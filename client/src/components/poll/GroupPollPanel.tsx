@@ -44,9 +44,7 @@ export function GroupPollPanel({
   }, [poll?.endsAt])
 
   const remainingMs =
-    poll?.endsAt !== null && poll?.endsAt !== undefined
-      ? Math.max(0, poll.endsAt - now)
-      : null
+    poll?.endsAt !== null && poll?.endsAt !== undefined ? Math.max(0, poll.endsAt - now) : null
 
   const maxCount = poll ? Math.max(1, ...poll.counts) : 1
   const totalVotes = poll ? poll.counts.reduce((a, b) => a + b, 0) : 0
@@ -97,7 +95,9 @@ export function GroupPollPanel({
               const inner = (
                 <>
                   <div className="flex items-center justify-between gap-2 text-xs">
-                    <span className="min-w-0 flex-1 font-medium text-[var(--vtt-text)]">{label}</span>
+                    <span className="min-w-0 flex-1 font-medium text-[var(--vtt-text)]">
+                      {label}
+                    </span>
                     <span className="shrink-0 font-mono text-[var(--vtt-text-muted)]">{c}</span>
                   </div>
                   <div
@@ -134,7 +134,9 @@ export function GroupPollPanel({
           <p className="text-[0.65rem] text-[var(--vtt-text-muted)]">
             {totalVotes} voto{totalVotes === 1 ? '' : 's'}
             {isDm && poll.votes ? (
-              <span className="ml-1 font-mono">· {Object.keys(poll.votes).length} participante(s)</span>
+              <span className="ml-1 font-mono">
+                · {Object.keys(poll.votes).length} participante(s)
+              </span>
             ) : null}
           </p>
 

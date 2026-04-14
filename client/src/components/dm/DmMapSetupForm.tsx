@@ -284,7 +284,8 @@ export function DmMapSetupForm({
               className="mt-1 size-4 rounded border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] text-[var(--vtt-gold)] focus:ring-[var(--vtt-gold)]"
             />
             <label htmlFor={hideNpcNamesId} className="text-sm text-[var(--vtt-text)]">
-              Ocultar nombres reales de PNJ a jugadores y espectadores (solo tú ves el nombre en mesa)
+              Ocultar nombres reales de PNJ a jugadores y espectadores (solo tú ves el nombre en
+              mesa)
             </label>
           </div>
           <div className="flex items-start gap-3">
@@ -296,7 +297,8 @@ export function DmMapSetupForm({
               className="mt-1 size-4 rounded border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] text-[var(--vtt-gold)] focus:ring-[var(--vtt-gold)]"
             />
             <label htmlFor={revealImgId} className="text-sm text-[var(--vtt-text)]">
-              Los jugadores pueden mostrar una imagen por URL a toda la mesa (10 s; tú siempre puedes)
+              Los jugadores pueden mostrar una imagen por URL a toda la mesa (10 s; tú siempre
+              puedes)
             </label>
           </div>
         </div>

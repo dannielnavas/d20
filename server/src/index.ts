@@ -33,10 +33,7 @@ import { registerRollRequestHandlers } from './socket-roll-request.js'
 import { registerMapToolsHandlers } from './socket-map-tools.js'
 import { emitTimerSyncToSocket } from './room-timer.js'
 import { registerTimerHandlers } from './socket-timer.js'
-import {
-  emitPrivateNotesInitial,
-  registerPrivateNotesHandlers,
-} from './socket-private-notes.js'
+import { emitPrivateNotesInitial, registerPrivateNotesHandlers } from './socket-private-notes.js'
 import { registerTokenHandlers } from './socket-tokens.js'
 import type { VttSocketData } from './socket-data.js'
 import { maybeAttachRedisAdapter } from './redis-adapter.js'

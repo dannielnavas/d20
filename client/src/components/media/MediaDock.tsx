@@ -405,7 +405,9 @@ export function MediaDock({
     }
 
     const onMediaErr = (msg: { message?: string }) => {
-      setMediaErr(msg?.message ?? 'Algo falló con la llamada de mesa. Comprueba permisos y conexión.')
+      setMediaErr(
+        msg?.message ?? 'Algo falló con la llamada de mesa. Comprueba permisos y conexión.',
+      )
     }
 
     const onDisconnect = () => {
@@ -492,8 +494,7 @@ export function MediaDock({
   const compact = layout === 'map'
 
   const localHandRaised = useMemo(
-    () =>
-      Boolean(playerSessionId && (roomState.raisedHands ?? []).includes(playerSessionId)),
+    () => Boolean(playerSessionId && (roomState.raisedHands ?? []).includes(playerSessionId)),
     [playerSessionId, roomState.raisedHands],
   )
 
@@ -639,9 +640,7 @@ export function MediaDock({
               muted={mapParticipants.top.muted}
               compact
               featured
-              handRaised={
-                mapParticipants.top.stream === localStream ? localHandRaised : false
-              }
+              handRaised={mapParticipants.top.stream === localStream ? localHandRaised : false}
             />
           </div>
         ) : null}
@@ -654,9 +653,7 @@ export function MediaDock({
               avatarUrl={mapParticipants.left.avatarUrl}
               muted={mapParticipants.left.muted}
               compact
-              handRaised={
-                mapParticipants.left.stream === localStream ? localHandRaised : false
-              }
+              handRaised={mapParticipants.left.stream === localStream ? localHandRaised : false}
             />
           </div>
         ) : null}
@@ -669,9 +666,7 @@ export function MediaDock({
               avatarUrl={mapParticipants.right.avatarUrl}
               muted={mapParticipants.right.muted}
               compact
-              handRaised={
-                mapParticipants.right.stream === localStream ? localHandRaised : false
-              }
+              handRaised={mapParticipants.right.stream === localStream ? localHandRaised : false}
             />
           </div>
         ) : null}

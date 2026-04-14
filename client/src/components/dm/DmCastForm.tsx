@@ -48,7 +48,9 @@ export function DmCastForm({ socket, getSpawnCenter, className = '' }: DmCastFor
     setLocalErr(null)
     const n = Number.parseInt(pcCount, 10)
     if (!Number.isFinite(n) || n < 1 || n > 12) {
-      setLocalErr('Puedes añadir entre 1 y 12 héroes a la vez. Ajusta el número e inténtalo de nuevo.')
+      setLocalErr(
+        'Puedes añadir entre 1 y 12 héroes a la vez. Ajusta el número e inténtalo de nuevo.',
+      )
       return
     }
     const { x, y } = getSpawnCenter()

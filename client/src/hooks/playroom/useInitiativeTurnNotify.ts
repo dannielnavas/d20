@@ -16,7 +16,10 @@ function getCurrentInitiativeTokenId(state: RoomState): string | null {
  * Jugador con PJ reclamado: al pasar a su turno en iniciativa, actualiza el título de la pestaña
  * y muestra una Notification del navegador si hay permiso.
  */
-export function useInitiativeTurnNotify(state: RoomState | null, session: SessionState | null): void {
+export function useInitiativeTurnNotify(
+  state: RoomState | null,
+  session: SessionState | null,
+): void {
   const defaultTitleRef = useRef(
     typeof document !== 'undefined' ? document.title : 'd20 — mesa virtual',
   )

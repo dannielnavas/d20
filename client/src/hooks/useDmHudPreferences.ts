@@ -26,13 +26,7 @@ type Stored = {
 }
 
 function isToolId(x: unknown): x is DmHudToolId {
-  return (
-    x === 'timer' ||
-    x === 'dice' ||
-    x === 'mapAudio' ||
-    x === 'notes' ||
-    x === 'chat'
-  )
+  return x === 'timer' || x === 'dice' || x === 'mapAudio' || x === 'notes' || x === 'chat'
 }
 
 function normalizeOrder(raw: unknown): DmHudToolId[] {
@@ -99,10 +93,7 @@ export function useDmHudPreferences(roomId: string) {
     saveStored(roomId, { order, hidden })
   }, [roomId, order, hidden, hydrated])
 
-  const visibleOrder = useMemo(
-    () => order.filter((id) => !hidden.includes(id)),
-    [order, hidden],
-  )
+  const visibleOrder = useMemo(() => order.filter((id) => !hidden.includes(id)), [order, hidden])
 
   const setHiddenTool = useCallback((id: DmHudToolId, isHidden: boolean) => {
     setHidden((prev) => {

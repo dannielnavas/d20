@@ -8,11 +8,11 @@ Inventario del monorepo **d20** (VTT ligero en tiempo real: React + Vite en `cli
 
 ### HTTP (Express)
 
-| Ruta | Función |
-|------|---------|
-| `GET /` | Página HTML informativa o JSON (`Accept: application/json`) con metadatos del servicio. |
-| `GET /health` | Comprobación de vida: `{ ok: true, service: 'd20-vtt' }`. |
-| `POST /auth/dm` | Intercambia `dmKey` por un **JWT de DM** de corta duración (evita reenviar la clave en cada `joinRoom`). |
+| Ruta                       | Función                                                                                                                                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /`                    | Página HTML informativa o JSON (`Accept: application/json`) con metadatos del servicio.                                                                                                   |
+| `GET /health`              | Comprobación de vida: `{ ok: true, service: 'd20-vtt' }`.                                                                                                                                 |
+| `POST /auth/dm`            | Intercambia `dmKey` por un **JWT de DM** de corta duración (evita reenviar la clave en cada `joinRoom`).                                                                                  |
 | `POST /automation/actions` | API opcional de **automatización** (Stream Deck, scripts locales): requiere `AUTOMATION_ENABLED=1`, `AUTOMATION_TOKEN` y header `x-automation-token`. Detalle en `server/STREAM_DECK.md`. |
 
 **CORS**: configurable (`server/src/cors-config.ts`); credenciales habilitadas para alinear con el cliente.
@@ -42,27 +42,27 @@ Restricciones típicas: `AUTOMATION_LOCAL_ONLY` (solo loopback por defecto), val
 
 ### Socket.io — eventos de dominio
 
-| Evento (cliente → servidor) | Rol / notas |
-|-----------------------------|-------------|
-| `tokenMove` / `tokenMoveEnd` | Mover fichas; validación de permisos (DM, o jugador solo su PC reclamado); **snap al soltar** si `snapToGrid`; rate limit. |
-| `claimPc` | Jugador reclama un token `pc` libre. |
-| `updateRoomSettings` | DM: fondo, tipo imagen/video, cuadrícula, snap, audio/volumen del mapa, si los jugadores pueden hacer ping. |
-| `setSessionPassword` | DM: fija o borra contraseña de mesa (hash en servidor). |
-| `spawnNpc` / `spawnPc` | DM: crea PNJ o uno o varios PCs (hasta 12 con nombres numerados). |
-| `initiativeSetModifier`, `initiativeToggleVisibility`, `initiativeMove`, `initiativeRollAll`, `initiativeNext`, `initiativeSetCurrent` | DM: iniciativa completa. |
-| `diceRoll` | DM o jugador con personaje; ventaja/desventaja en d20. |
-| `diceLogReset` | Solo DM: vacía el log de dados. |
-| `chatMessage` | Chat con límite de texto y rate limit. |
-| `mapPing` | Ping en mapa (DM siempre; jugadores si `playersCanPing`). |
-| `tokenSetConditions` | DM en cualquier token; jugador en **su** PC: hasta 6 condiciones. |
-| `privateNoteSet` / `privateNoteDelete` | Notas privadas por jugador/DM sobre tokens; no se publican al resto. |
-| `pollStart` / `pollVote` / `pollClose` | Encuestas grupales de la mesa (creación DM y votación en vivo). |
-| `raiseHandSet` | Estado de “mano levantada” para turnos de palabra y atención del DM. |
-| `rollRequestCreate` / `rollRequestResolve` | Solicitudes de tirada desde DM y resolución por jugador. |
-| `timerStart` / `timerPause` / `timerResume` / `timerStop` | Temporizador de turno o escena sincronizado para toda la sala. |
-| `screenReactionSend` / `tokenReactionSet` | Reacciones visuales globales y reacciones ligadas a tokens. |
-| `imageRevealStart` / `imageRevealUpdate` / `imageRevealFinish` | Revelado progresivo de imagen para escenas/pistas. |
-| `mediaJoin`, `mediaLeave`, `webrtcSignal` | Señalización WebRTC entre pares en la misma sala (`server/src/media-room.ts`). |
+| Evento (cliente → servidor)                                                                                                            | Rol / notas                                                                                                                |
+| -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `tokenMove` / `tokenMoveEnd`                                                                                                           | Mover fichas; validación de permisos (DM, o jugador solo su PC reclamado); **snap al soltar** si `snapToGrid`; rate limit. |
+| `claimPc`                                                                                                                              | Jugador reclama un token `pc` libre.                                                                                       |
+| `updateRoomSettings`                                                                                                                   | DM: fondo, tipo imagen/video, cuadrícula, snap, audio/volumen del mapa, si los jugadores pueden hacer ping.                |
+| `setSessionPassword`                                                                                                                   | DM: fija o borra contraseña de mesa (hash en servidor).                                                                    |
+| `spawnNpc` / `spawnPc`                                                                                                                 | DM: crea PNJ o uno o varios PCs (hasta 12 con nombres numerados).                                                          |
+| `initiativeSetModifier`, `initiativeToggleVisibility`, `initiativeMove`, `initiativeRollAll`, `initiativeNext`, `initiativeSetCurrent` | DM: iniciativa completa.                                                                                                   |
+| `diceRoll`                                                                                                                             | DM o jugador con personaje; ventaja/desventaja en d20.                                                                     |
+| `diceLogReset`                                                                                                                         | Solo DM: vacía el log de dados.                                                                                            |
+| `chatMessage`                                                                                                                          | Chat con límite de texto y rate limit.                                                                                     |
+| `mapPing`                                                                                                                              | Ping en mapa (DM siempre; jugadores si `playersCanPing`).                                                                  |
+| `tokenSetConditions`                                                                                                                   | DM en cualquier token; jugador en **su** PC: hasta 6 condiciones.                                                          |
+| `privateNoteSet` / `privateNoteDelete`                                                                                                 | Notas privadas por jugador/DM sobre tokens; no se publican al resto.                                                       |
+| `pollStart` / `pollVote` / `pollClose`                                                                                                 | Encuestas grupales de la mesa (creación DM y votación en vivo).                                                            |
+| `raiseHandSet`                                                                                                                         | Estado de “mano levantada” para turnos de palabra y atención del DM.                                                       |
+| `rollRequestCreate` / `rollRequestResolve`                                                                                             | Solicitudes de tirada desde DM y resolución por jugador.                                                                   |
+| `timerStart` / `timerPause` / `timerResume` / `timerStop`                                                                              | Temporizador de turno o escena sincronizado para toda la sala.                                                             |
+| `screenReactionSend` / `tokenReactionSet`                                                                                              | Reacciones visuales globales y reacciones ligadas a tokens.                                                                |
+| `imageRevealStart` / `imageRevealUpdate` / `imageRevealFinish`                                                                         | Revelado progresivo de imagen para escenas/pistas.                                                                         |
+| `mediaJoin`, `mediaLeave`, `webrtcSignal`                                                                                              | Señalización WebRTC entre pares en la misma sala (`server/src/media-room.ts`).                                             |
 
 **Emisiones servidor → cliente** (entre otras): `roomState`, `roomError`, `sessionState`, `tokenError`, `claimError`, `dmError`, `tokenMove`, `tokenMoveEnd`, `diceRolled`, `mapPing`, eventos de media (`mediaPeersSnapshot`, `mediaPeerJoined`, `mediaPeerLeft`, `webrtcSignal`, `mediaError`) y actualizaciones de encuestas, notas privadas, mano levantada, temporizador, solicitudes de tirada, reveal de imagen y reacciones de pantalla/token.
 

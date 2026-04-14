@@ -8,7 +8,9 @@ import { assertNotSpectator } from './socket-guards.js'
 function assertDm(socket: Socket): boolean {
   const d = socket.data as VttSocketData
   if (!d.isDm) {
-    socket.emit('dmError', { message: 'Solo el director puede quitar la mano levantada de un jugador.' })
+    socket.emit('dmError', {
+      message: 'Solo el director puede quitar la mano levantada de un jugador.',
+    })
     return false
   }
   return true

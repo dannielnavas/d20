@@ -1,8 +1,5 @@
 import type { Server } from 'socket.io'
-import {
-  publicRoomState,
-  type PublicRoomViewer,
-} from './room-session-password.js'
+import { publicRoomState, type PublicRoomViewer } from './room-session-password.js'
 import { schedulePersist } from './persistence.js'
 import type { VttSocketData } from './socket-data.js'
 import type { RoomState } from './types.js'

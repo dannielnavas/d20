@@ -44,16 +44,13 @@ function parseGlobalFromSettings(
   }
 }
 
-function parseMapFromFlatSettings(
-  s: Partial<RoomState['settings']> | undefined,
-): SceneMapSettings {
+function parseMapFromFlatSettings(s: Partial<RoomState['settings']> | undefined): SceneMapSettings {
   if (!s) return defaultSceneMapSettings()
   return {
     backgroundUrl: typeof s.backgroundUrl === 'string' ? s.backgroundUrl : '',
     backgroundType: s.backgroundType === 'video' ? 'video' : 'image',
     mapAudioEnabled: Boolean(s.mapAudioEnabled),
-    mapVolume:
-      typeof s.mapVolume === 'number' && Number.isFinite(s.mapVolume) ? s.mapVolume : 70,
+    mapVolume: typeof s.mapVolume === 'number' && Number.isFinite(s.mapVolume) ? s.mapVolume : 70,
     gridSize: typeof s.gridSize === 'number' && Number.isFinite(s.gridSize) ? s.gridSize : 50,
     snapToGrid: s.snapToGrid !== false,
   }
@@ -73,8 +70,7 @@ function normalizeActivePoll(raw: unknown): RoomActivePoll | null {
     const c = countsRaw[i]
     return typeof c === 'number' && Number.isFinite(c) ? Math.max(0, Math.round(c)) : 0
   })
-  const endsAt =
-    typeof o.endsAt === 'number' && Number.isFinite(o.endsAt) ? o.endsAt : null
+  const endsAt = typeof o.endsAt === 'number' && Number.isFinite(o.endsAt) ? o.endsAt : null
   const out: RoomActivePoll = {
     id: o.id,
     question: o.question,
@@ -95,15 +91,7 @@ function normalizeActivePoll(raw: unknown): RoomActivePoll | null {
   return out
 }
 
-const DIE_TYPES = new Set([
-  'd4',
-  'd6',
-  'd8',
-  'd10',
-  'd12',
-  'd20',
-  'd100',
-])
+const DIE_TYPES = new Set(['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'])
 const DICE_MODES = new Set(['normal', 'advantage', 'disadvantage'])
 
 function normalizePendingRollRequests(raw: unknown): PendingRollRequest[] {
@@ -198,8 +186,7 @@ export function normalizeRoomState(payload: RoomState): RoomState {
           typeof ini.currentIndex === 'number' || ini.currentIndex === null
             ? ini.currentIndex
             : null,
-        modifiers:
-          ini.modifiers && typeof ini.modifiers === 'object' ? ini.modifiers : {},
+        modifiers: ini.modifiers && typeof ini.modifiers === 'object' ? ini.modifiers : {},
       }
     : {
         visible: false,
@@ -210,9 +197,7 @@ export function normalizeRoomState(payload: RoomState): RoomState {
 
   let scenes: Scene[] = Array.isArray(payload.scenes) ? payload.scenes : []
   let activeSceneId =
-    typeof payload.activeSceneId === 'string' && payload.activeSceneId
-      ? payload.activeSceneId
-      : ''
+    typeof payload.activeSceneId === 'string' && payload.activeSceneId ? payload.activeSceneId : ''
 
   if (scenes.length === 0 && Array.isArray(payload.tokens)) {
     const id = `scn-local-${payload.roomId || 'r'}`
@@ -274,9 +259,7 @@ export function normalizeRoomState(payload: RoomState): RoomState {
     scenes,
     activeSceneId: active?.id ?? activeSceneId,
     tokens,
-    activePoll: normalizeActivePoll(
-      (payload as Record<string, unknown>).activePoll,
-    ),
+    activePoll: normalizeActivePoll((payload as Record<string, unknown>).activePoll),
     pendingRollRequests: normalizePendingRollRequests(
       (payload as Record<string, unknown>).pendingRollRequests,
     ),

@@ -52,7 +52,11 @@ export function DmSceneBar({ socket, roomState, className = '' }: DmSceneBarProp
         + Nueva
       </button>
       {canDelete ? (
-        <button type="button" className="vtt-btn-secondary px-2 py-1.5 text-xs" onClick={deleteCurrent}>
+        <button
+          type="button"
+          className="vtt-btn-secondary px-2 py-1.5 text-xs"
+          onClick={deleteCurrent}
+        >
           Borrar (vacía)
         </button>
       ) : null}

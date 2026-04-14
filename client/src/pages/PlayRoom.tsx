@@ -86,9 +86,7 @@ export function PlayRoom() {
 
   const [notificationPermission, setNotificationPermission] = useState<
     NotificationPermission | 'unsupported'
-  >(() =>
-    typeof Notification !== 'undefined' ? Notification.permission : 'unsupported',
-  )
+  >(() => (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'))
 
   useInitiativeTurnNotify(state, session)
 
@@ -201,19 +199,17 @@ export function PlayRoom() {
 
   const showMap = Boolean(
     state &&
-      session &&
-      (session.role === 'dm' ||
-        session.role === 'spectator' ||
-        session.claimedTokenId !== null),
+    session &&
+    (session.role === 'dm' || session.role === 'spectator' || session.claimedTokenId !== null),
   )
 
   const pcs = state ? allPlayerCharacters(state) : []
   const canUseDicePanel = Boolean(
     socket &&
-      state &&
-      showMap &&
-      session?.role !== 'spectator' &&
-      (session?.role === 'dm' || (session?.role === 'player' && session.claimedTokenId)),
+    state &&
+    showMap &&
+    session?.role !== 'spectator' &&
+    (session?.role === 'dm' || (session?.role === 'player' && session.claimedTokenId)),
   )
 
   const sessionLabel =
@@ -383,8 +379,8 @@ export function PlayRoom() {
                 Contraseña de la mesa
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-[var(--vtt-text-muted)]">
-                El director de juego ha protegido esta mesa. Escribe la misma contraseña que compartió
-                con el grupo (no es la clave privada del director).
+                El director de juego ha protegido esta mesa. Escribe la misma contraseña que
+                compartió con el grupo (no es la clave privada del director).
               </p>
               <div className="mt-5 flex flex-col gap-3">
                 <label
@@ -528,8 +524,8 @@ export function PlayRoom() {
               </p>
               {rollRequestFeedback.outcome === 'approved' ? (
                 <p className="mt-1 text-sm text-[var(--vtt-text)]">
-                  El director dio luz verde. Puedes tirar cuando quieras con el dado y modo que elegiste al
-                  enviar la solicitud
+                  El director dio luz verde. Puedes tirar cuando quieras con el dado y modo que
+                  elegiste al enviar la solicitud
                   {rollRequestFeedback.dieType ? (
                     <>
                       {' '}
@@ -549,7 +545,8 @@ export function PlayRoom() {
                 </p>
               ) : (
                 <p className="mt-1 text-sm text-[var(--vtt-text-muted)]">
-                  El director descartó esta petición. Si sigue en juego, pregunta de nuevo o por el chat.
+                  El director descartó esta petición. Si sigue en juego, pregunta de nuevo o por el
+                  chat.
                 </p>
               )}
               {rollRequestFeedback.reason ? (
@@ -580,8 +577,12 @@ export function PlayRoom() {
               <p className="font-vtt-display text-xs font-semibold uppercase tracking-wide text-[var(--vtt-gold)]">
                 Te mencionaron
               </p>
-              <p className="mt-1 text-sm font-semibold text-[var(--vtt-text)]">{mentionToast.author}</p>
-              <p className="mt-1 line-clamp-3 text-sm text-[var(--vtt-text-muted)]">{mentionToast.preview}</p>
+              <p className="mt-1 text-sm font-semibold text-[var(--vtt-text)]">
+                {mentionToast.author}
+              </p>
+              <p className="mt-1 line-clamp-3 text-sm text-[var(--vtt-text-muted)]">
+                {mentionToast.preview}
+              </p>
             </div>
             <div className="flex shrink-0 flex-col gap-1">
               <button
@@ -645,9 +646,7 @@ export function PlayRoom() {
             roomState={state}
             isDm={session?.role === 'dm'}
             playerSessionId={session?.role === 'player' ? playerSessionId : null}
-            canRequestRoll={
-              session?.role === 'player' && Boolean(session.claimedTokenId)
-            }
+            canRequestRoll={session?.role === 'player' && Boolean(session.claimedTokenId)}
           />
         ) : null}
 

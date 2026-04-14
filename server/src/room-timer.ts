@@ -9,7 +9,9 @@ type ActiveTimer = {
 
 const timers = new Map<string, ActiveTimer>()
 
-export function getTimerSnapshot(roomId: string): { remaining: number; totalSeconds: number } | null {
+export function getTimerSnapshot(
+  roomId: string,
+): { remaining: number; totalSeconds: number } | null {
   const t = timers.get(roomId)
   if (!t || t.remaining < 0) return null
   return { remaining: t.remaining, totalSeconds: t.totalSeconds }

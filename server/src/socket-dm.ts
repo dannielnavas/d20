@@ -32,7 +32,8 @@ function parseUpdateSettings(payload: unknown): SettingsPatch | null {
   if (typeof o.showTokenNames === 'boolean') out.showTokenNames = o.showTokenNames
   if (typeof o.hideNpcNamesFromPlayers === 'boolean')
     out.hideNpcNamesFromPlayers = o.hideNpcNamesFromPlayers
-  if (typeof o.playersCanRevealImage === 'boolean') out.playersCanRevealImage = o.playersCanRevealImage
+  if (typeof o.playersCanRevealImage === 'boolean')
+    out.playersCanRevealImage = o.playersCanRevealImage
 
   return Object.keys(out).length > 0 ? out : null
 }
@@ -103,7 +104,8 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     const partial = parseUpdateSettings(payload)
     if (!partial) {
       socket.emit('dmError', {
-        message: 'No hay cambios que guardar. Ajusta mapa, cuadrícula u otra opción e inténtalo de nuevo.',
+        message:
+          'No hay cambios que guardar. Ajusta mapa, cuadrícula u otra opción e inténtalo de nuevo.',
       })
       return
     }
@@ -237,7 +239,10 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     room.initiative.currentIndex = 0
     room.initiative.visible = true
     const summary = scored
-      .map((s) => `${s.t.name}: ${s.roll}${s.mod ? (s.mod > 0 ? `+${s.mod}` : `${s.mod}`) : ''}=${s.total}`)
+      .map(
+        (s) =>
+          `${s.t.name}: ${s.roll}${s.mod ? (s.mod > 0 ? `+${s.mod}` : `${s.mod}`) : ''}=${s.total}`,
+      )
       .join(' · ')
     appendActivity(room, 'initiative', `Iniciativa — ${summary}`)
     broadcastRoomState(io, room)
@@ -254,18 +259,15 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     if (order.length === 0) return
     const prevIndex = room.initiative.currentIndex
     const prevTokenId =
-      prevIndex !== null && prevIndex >= 0 && prevIndex < order.length
-        ? order[prevIndex]
-        : null
-    const nextIndex =
-      prevIndex === null ? 0 : (prevIndex + 1) % order.length
+      prevIndex !== null && prevIndex >= 0 && prevIndex < order.length ? order[prevIndex] : null
+    const nextIndex = prevIndex === null ? 0 : (prevIndex + 1) % order.length
     room.initiative.currentIndex = nextIndex
     if (prevTokenId) clearRaisedHandForToken(room, prevTokenId)
     const curId =
       room.initiative.currentIndex !== null
         ? room.initiative.order[room.initiative.currentIndex]
         : null
-    const name = curId ? findTokenInRoom(room, curId)?.name ?? curId : '?'
+    const name = curId ? (findTokenInRoom(room, curId)?.name ?? curId) : '?'
     appendActivity(room, 'initiative', `Turno: ${name}`)
     broadcastRoomState(io, room)
   })
@@ -300,7 +302,8 @@ export function registerDmHandlers(io: Server, socket: Socket) {
 
     if (typeof payload !== 'object' || payload === null) {
       socket.emit('dmError', {
-        message: 'No recibimos bien los datos de la contraseña. Cierra el panel y vuelve a intentarlo.',
+        message:
+          'No recibimos bien los datos de la contraseña. Cierra el panel y vuelve a intentarlo.',
       })
       return
     }
@@ -366,7 +369,9 @@ export function registerDmHandlers(io: Server, socket: Socket) {
       return
     }
 
-    const slot = getActiveScene(room).tokens.filter((t) => t.type !== 'npc' || t.onMap !== false).length
+    const slot = getActiveScene(room).tokens.filter(
+      (t) => t.type !== 'npc' || t.onMap !== false,
+    ).length
     const { x, y } = placeTokenXY(room, parsed.x, parsed.y, slot)
 
     const token: Token = {
@@ -445,7 +450,9 @@ export function registerDmHandlers(io: Server, socket: Socket) {
 
     const room = getOrCreateRoom(roomId)
     const baseName = parsed.name.trim() || 'Héroe'
-    const baseSlot = getActiveScene(room).tokens.filter((t) => t.type !== 'npc' || t.onMap !== false).length
+    const baseSlot = getActiveScene(room).tokens.filter(
+      (t) => t.type !== 'npc' || t.onMap !== false,
+    ).length
 
     for (let i = 0; i < parsed.count; i++) {
       const displayName = parsed.count > 1 ? `${baseName} ${i + 1}`.trim() : baseName
@@ -503,8 +510,7 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     if (!roomId) return
 
     const room = getOrCreateRoom(roomId)
-    const o =
-      payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {}
+    const o = payload && typeof payload === 'object' ? (payload as Record<string, unknown>) : {}
     const name =
       typeof o.name === 'string' && o.name.trim()
         ? o.name.trim().slice(0, 80)

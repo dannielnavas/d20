@@ -176,7 +176,9 @@ function DmPrivateNotes({
     setSelectedSid((cur) => (cur && options.some((o) => o.sid === cur) ? cur : options[0].sid))
   }, [options])
 
-  const entry = selectedSid ? (bySession[selectedSid] ?? { dm: '', player: '' }) : { dm: '', player: '' }
+  const entry = selectedSid
+    ? (bySession[selectedSid] ?? { dm: '', player: '' })
+    : { dm: '', player: '' }
   const [draftDm, setDraftDm] = useState(entry.dm)
 
   useEffect(() => {

@@ -93,12 +93,14 @@ function mapActivePollForViewer(
   return base
 }
 
-export function publicRoomState(room: RoomState, viewer: PublicRoomViewer = { role: 'spectator' }): RoomState {
+export function publicRoomState(
+  room: RoomState,
+  viewer: PublicRoomViewer = { role: 'spectator' },
+): RoomState {
   const { privateNotesBySession: _notes, ...rest } = room
   const hideNpc = npcNameHiddenFromViewer(room, viewer)
   const activePoll = mapActivePollForViewer(room.activePoll ?? null, viewer)
-  const pendingRollRequests =
-    viewer.role === 'dm' ? [...(room.pendingRollRequests ?? [])] : []
+  const pendingRollRequests = viewer.role === 'dm' ? [...(room.pendingRollRequests ?? [])] : []
   return {
     ...rest,
     activePoll: (activePoll ?? null) as RoomState['activePoll'],

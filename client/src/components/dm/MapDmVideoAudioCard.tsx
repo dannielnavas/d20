@@ -50,7 +50,9 @@ export function MapDmVideoAudioCard({
             Audio del mapa
           </p>
         )}
-        <p className={`text-xs leading-relaxed text-[var(--vtt-text-muted)] ${embedded ? '' : 'mt-1'}`}>
+        <p
+          className={`text-xs leading-relaxed text-[var(--vtt-text-muted)] ${embedded ? '' : 'mt-1'}`}
+        >
           Solo aplica cuando el fondo de la escena es vídeo (archivo o YouTube).
         </p>
       </div>

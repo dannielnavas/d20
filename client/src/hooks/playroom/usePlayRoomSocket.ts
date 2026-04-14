@@ -71,7 +71,9 @@ export function usePlayRoomSocket(
   const [connected, setConnected] = useState(false)
   const [claimingId, setClaimingId] = useState<string | null>(null)
   const [passwordGate, setPasswordGate] = useState(false)
-  const [privateNotesPlayerPair, setPrivateNotesPlayerPair] = useState<PrivateNotesPair | null>(null)
+  const [privateNotesPlayerPair, setPrivateNotesPlayerPair] = useState<PrivateNotesPair | null>(
+    null,
+  )
   const [privateNotesDmBySession, setPrivateNotesDmBySession] = useState<
     Record<string, PrivateNotesPair>
   >({})
@@ -120,16 +122,22 @@ export function usePlayRoomSocket(
       if (code === 'SESSION_PASSWORD_REQUIRED' || code === 'SESSION_PASSWORD_INVALID') {
         setPasswordGate(true)
       }
-      setError(payload?.message ?? 'No pudimos cargar la mesa. Recarga la página o inténtalo más tarde.')
+      setError(
+        payload?.message ?? 'No pudimos cargar la mesa. Recarga la página o inténtalo más tarde.',
+      )
     }
     const onTokenError = (payload: { message?: string }) => {
       setError(
-        payload?.message ?? 'Esa ficha no la controlas tú: elige la tuya o pide permiso al director.',
+        payload?.message ??
+          'Esa ficha no la controlas tú: elige la tuya o pide permiso al director.',
       )
     }
     const onClaimError = (payload: { message?: string }) => {
       setClaimingId(null)
-      setError(payload?.message ?? 'No pudimos asignarte ese personaje. Prueba con otro o recarga la página.')
+      setError(
+        payload?.message ??
+          'No pudimos asignarte ese personaje. Prueba con otro o recarga la página.',
+      )
     }
     const onDmError = (payload: { message?: string }) => {
       setError(payload?.message ?? 'Solo el director de juego puede hacer eso desde su panel.')

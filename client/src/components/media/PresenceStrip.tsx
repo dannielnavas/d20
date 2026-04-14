@@ -75,9 +75,7 @@ export function PresenceStrip({
                   type="button"
                   className="shrink-0 rounded px-1 text-[0.65rem] leading-none text-[var(--vtt-text-muted)] hover:bg-[var(--vtt-border-subtle)] hover:text-[var(--vtt-text)]"
                   title="Quitar mano levantada"
-                  onClick={() =>
-                    socket.emit('raiseHandDismiss', { playerSessionId: r.sessionId })
-                  }
+                  onClick={() => socket.emit('raiseHandDismiss', { playerSessionId: r.sessionId })}
                 >
                   ✕
                 </button>

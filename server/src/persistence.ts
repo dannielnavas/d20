@@ -77,12 +77,7 @@ async function flushPersist(): Promise<void> {
     const rooms = getAllRooms()
     const roomsObj: Record<string, RoomState> = {}
     for (const [k, v] of rooms) {
-      const {
-        activePoll: _poll,
-        pendingRollRequests: _prr,
-        raisedHands: _rh,
-        ...rest
-      } = v
+      const { activePoll: _poll, pendingRollRequests: _prr, raisedHands: _rh, ...rest } = v
       roomsObj[k] = rest as RoomState
     }
     const payload: SnapshotFile = {

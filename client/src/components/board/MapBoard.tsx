@@ -310,8 +310,7 @@ export function MapBoard({
 
   const showInteractiveMap = !isDm || dmScreen === 'mesa'
 
-  const canEmitPing =
-    !isSpectator && (isDm || roomState.settings.playersCanPing !== false)
+  const canEmitPing = !isSpectator && (isDm || roomState.settings.playersCanPing !== false)
 
   const getSpawnCenter = useCallback(
     () => ({
@@ -407,78 +406,78 @@ export function MapBoard({
                     key={roomState.activeSceneId}
                     className="vtt-scene-enter relative h-full w-full"
                   >
-                  {hasMedia && backgroundType === 'video' && youtubeParsed && ytEmbedSrc ? (
-                    <iframe
-                      key={backgroundUrl}
-                      id={ytIframeId}
-                      title="Vídeo de mapa (YouTube)"
-                      className="pointer-events-none absolute inset-0 h-full w-full border-0 object-contain"
-                      src={ytEmbedSrc}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen={false}
-                      loading="lazy"
-                      referrerPolicy="strict-origin-when-cross-origin"
-                    />
-                  ) : null}
-                  {hasMedia && backgroundType === 'video' && !youtubeParsed ? (
-                    <DirectMapLoopVideo
-                      key={backgroundUrl}
-                      src={backgroundUrl}
-                      audioEnabled={mapAudioEnabled}
-                      volumePercent={mapVolume}
-                      onLoadedMetadata={onVideoMeta}
-                      onError={onVideoError}
-                      onAudioState={onDirectMapAudioState}
-                    />
-                  ) : null}
-                  {hasMedia && backgroundType === 'image' ? (
-                    <img
-                      key={backgroundUrl}
-                      alt=""
-                      role="presentation"
-                      draggable={false}
-                      className="pointer-events-none absolute inset-0 h-full w-full object-contain"
-                      src={backgroundUrl}
-                      onLoad={onImgLoad}
-                      onError={onImgError}
-                    />
-                  ) : null}
-                  {!hasMedia ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--vtt-bg-elevated)] text-center">
-                      <p className="font-vtt-display text-sm font-semibold tracking-wide text-[var(--vtt-gold)]">
-                        Sin mapa cargado
-                      </p>
-                      <p className="max-w-sm px-4 text-xs leading-relaxed text-[var(--vtt-text-muted)]">
-                        {isDm
-                          ? 'En la pestaña «Mapa» puedes poner imagen, vídeo o YouTube; aquí verás el tablero en vivo.'
-                          : 'Cuando el director cargue el mapa y coloque personajes, verás la mesa aquí.'}
-                      </p>
-                      <div
-                        className="absolute inset-0 opacity-[0.14]"
-                        aria-hidden
-                        style={{
-                          backgroundImage: `
+                    {hasMedia && backgroundType === 'video' && youtubeParsed && ytEmbedSrc ? (
+                      <iframe
+                        key={backgroundUrl}
+                        id={ytIframeId}
+                        title="Vídeo de mapa (YouTube)"
+                        className="pointer-events-none absolute inset-0 h-full w-full border-0 object-contain"
+                        src={ytEmbedSrc}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen={false}
+                        loading="lazy"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                      />
+                    ) : null}
+                    {hasMedia && backgroundType === 'video' && !youtubeParsed ? (
+                      <DirectMapLoopVideo
+                        key={backgroundUrl}
+                        src={backgroundUrl}
+                        audioEnabled={mapAudioEnabled}
+                        volumePercent={mapVolume}
+                        onLoadedMetadata={onVideoMeta}
+                        onError={onVideoError}
+                        onAudioState={onDirectMapAudioState}
+                      />
+                    ) : null}
+                    {hasMedia && backgroundType === 'image' ? (
+                      <img
+                        key={backgroundUrl}
+                        alt=""
+                        role="presentation"
+                        draggable={false}
+                        className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+                        src={backgroundUrl}
+                        onLoad={onImgLoad}
+                        onError={onImgError}
+                      />
+                    ) : null}
+                    {!hasMedia ? (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--vtt-bg-elevated)] text-center">
+                        <p className="font-vtt-display text-sm font-semibold tracking-wide text-[var(--vtt-gold)]">
+                          Sin mapa cargado
+                        </p>
+                        <p className="max-w-sm px-4 text-xs leading-relaxed text-[var(--vtt-text-muted)]">
+                          {isDm
+                            ? 'En la pestaña «Mapa» puedes poner imagen, vídeo o YouTube; aquí verás el tablero en vivo.'
+                            : 'Cuando el director cargue el mapa y coloque personajes, verás la mesa aquí.'}
+                        </p>
+                        <div
+                          className="absolute inset-0 opacity-[0.14]"
+                          aria-hidden
+                          style={{
+                            backgroundImage: `
                           linear-gradient(to right, rgba(201, 164, 58, 0.35) 1px, transparent 1px),
                           linear-gradient(to bottom, rgba(201, 164, 58, 0.35) 1px, transparent 1px)
                         `,
-                          backgroundSize: '64px 64px',
-                        }}
-                      />
-                    </div>
-                  ) : null}
+                            backgroundSize: '64px 64px',
+                          }}
+                        />
+                      </div>
+                    ) : null}
 
-                  <TokensLayer
-                    socket={socket}
-                    tokens={roomState.tokens}
-                    setRoomState={setRoomState}
-                    viewportRef={viewportRef}
-                    canDragToken={canDragToken}
-                    gridSize={roomState.settings.gridSize}
-                    snapToGrid={roomState.settings.snapToGrid}
-                    showTokenNames={roomState.settings.showTokenNames !== false}
-                    raisedHands={roomState.raisedHands ?? []}
-                    showRaiseHandForDm={isDm}
-                  />
+                    <TokensLayer
+                      socket={socket}
+                      tokens={roomState.tokens}
+                      setRoomState={setRoomState}
+                      viewportRef={viewportRef}
+                      canDragToken={canDragToken}
+                      gridSize={roomState.settings.gridSize}
+                      snapToGrid={roomState.settings.snapToGrid}
+                      showTokenNames={roomState.settings.showTokenNames !== false}
+                      raisedHands={roomState.raisedHands ?? []}
+                      showRaiseHandForDm={isDm}
+                    />
                   </div>
                 </MapPingBridge>
               </TransformComponent>

@@ -88,11 +88,7 @@ export function DmCollapsibleCard({
           {expanded ? '−' : '+'}
         </span>
       </button>
-      <div
-        id={`${labelId}-panel`}
-        className={bodyClassName || 'min-w-0'}
-        hidden={!expanded}
-      >
+      <div id={`${labelId}-panel`} className={bodyClassName || 'min-w-0'} hidden={!expanded}>
         {children}
       </div>
     </section>

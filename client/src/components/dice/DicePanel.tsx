@@ -96,127 +96,127 @@ export function DicePanel({
           role="region"
           aria-labelledby={showInnerHeader ? 'dice-panel-cabecera' : undefined}
         >
-        <div className="grid grid-cols-2 gap-2">
-          <label className="text-xs text-[var(--vtt-text-muted)]">
-            Dado
-            <select
-              className="vtt-input mt-1"
-              value={dieType}
-              onChange={(e) => setDieType(e.target.value as DieType)}
-            >
-              {DIE_OPTIONS.map((die) => (
-                <option key={die} value={die}>
-                  {die}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs text-[var(--vtt-text-muted)]">
-            Modo
-            <select
-              className="vtt-input mt-1"
-              value={mode}
-              onChange={(e) => setMode(e.target.value as DiceMode)}
-              disabled={!isD20}
-            >
-              <option value="normal">Normal</option>
-              <option value="advantage">Ventaja</option>
-              <option value="disadvantage">Desventaja</option>
-            </select>
-          </label>
-        </div>
-
-        <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs text-[var(--vtt-text-muted)]">
-          <input
-            type="checkbox"
-            checked={secretRoll}
-            onChange={(e) => setSecretRoll(e.target.checked)}
-            className="mt-0.5 size-4 shrink-0 rounded border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] text-[var(--vtt-gold)]"
-          />
-          <span>
-            Tirada oculta: solo el director ve el resultado en la mesa
-            {!isDm ? ' (tú también ves tu tirada).' : '.'}
-          </span>
-        </label>
-
-        <button type="button" className="vtt-btn-primary mt-3 w-full text-xs" onClick={onRoll}>
-          Tirar {dieType}
-        </button>
-
-        {!isDm && canRequestRoll ? (
-          <div className="mt-3 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface-warm)]/80 p-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]">
-              Pedir permiso al director
-            </p>
-            <label className="mt-2 block text-xs text-[var(--vtt-text-muted)]">
-              Motivo
-              <textarea
-                className="vtt-input mt-1 min-h-[3.25rem] w-full resize-y text-[var(--vtt-text)]"
-                rows={2}
-                maxLength={400}
-                placeholder="Ej.: ¿Puedo tirar Percepción para el pasillo?"
-                value={rollReason}
-                onChange={(e) => setRollReason(e.target.value)}
-                aria-label="Motivo de la solicitud de tirada"
-              />
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-xs text-[var(--vtt-text-muted)]">
+              Dado
+              <select
+                className="vtt-input mt-1"
+                value={dieType}
+                onChange={(e) => setDieType(e.target.value as DieType)}
+              >
+                {DIE_OPTIONS.map((die) => (
+                  <option key={die} value={die}>
+                    {die}
+                  </option>
+                ))}
+              </select>
             </label>
-            <p className="mt-1 text-[0.65rem] text-[var(--vtt-text-muted)]">
-              Se usa el dado y modo seleccionados arriba. El DM verá la petición y puede aprobarla o
-              ignorarla.
-            </p>
-            <button
-              type="button"
-              className="vtt-btn-secondary mt-2 w-full text-xs"
-              onClick={onRequestRoll}
-            >
-              Enviar solicitud
-            </button>
+            <label className="text-xs text-[var(--vtt-text-muted)]">
+              Modo
+              <select
+                className="vtt-input mt-1"
+                value={mode}
+                onChange={(e) => setMode(e.target.value as DiceMode)}
+                disabled={!isD20}
+              >
+                <option value="normal">Normal</option>
+                <option value="advantage">Ventaja</option>
+                <option value="disadvantage">Desventaja</option>
+              </select>
+            </label>
           </div>
-        ) : null}
 
-        <div className="mt-3 border-t border-[var(--vtt-border-subtle)] pt-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]">
-            Historial
-          </p>
-          {recentRolls.length === 0 ? (
-            <p className="mt-1 text-xs text-[var(--vtt-text-muted)]">Aún no hay tiradas.</p>
-          ) : (
-            <ol className="mt-2 grid max-h-40 gap-1 overflow-auto pr-1">
-              {recentRolls.map((roll) => {
-                const isOwnSecretPlayer =
-                  Boolean(roll.secret) &&
-                  !isDm &&
-                  playerSessionId &&
-                  roll.playerSessionId === playerSessionId
-                const showDmSecretBadge = Boolean(roll.secret) && isDm
-                return (
-                  <li
-                    key={roll.id}
-                    className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] px-2 py-1 text-xs text-[var(--vtt-text)]"
-                  >
-                    <span className="font-semibold text-[var(--vtt-gold)]">{roll.roller}</span> tira{' '}
-                    {roll.dieType} ({modeLabel(roll.mode)}):{' '}
-                    {roll.rolls.length > 1 ? `${roll.rolls.join('/')} → ` : ''}
-                    <span className="font-semibold">{roll.total}</span>
-                    {showDmSecretBadge ? (
-                      <span
-                        className="ml-1.5 inline-block rounded-sm border border-[var(--vtt-gold-dim)] bg-[var(--vtt-surface-warm)] px-1.5 py-0.5 font-vtt-display text-[0.6rem] font-semibold uppercase tracking-wide text-[var(--vtt-gold)]"
-                        title="Los demás jugadores no ven esta tirada en el historial"
-                      >
-                        Oculta
-                      </span>
-                    ) : null}
-                    {isOwnSecretPlayer ? (
-                      <span className="ml-1 text-[0.65rem] text-[var(--vtt-text-muted)]">
-                        (no visible para el resto)
-                      </span>
-                    ) : null}
-                  </li>
-                )
-              })}
-            </ol>
-          )}
-        </div>
+          <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs text-[var(--vtt-text-muted)]">
+            <input
+              type="checkbox"
+              checked={secretRoll}
+              onChange={(e) => setSecretRoll(e.target.checked)}
+              className="mt-0.5 size-4 shrink-0 rounded border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] text-[var(--vtt-gold)]"
+            />
+            <span>
+              Tirada oculta: solo el director ve el resultado en la mesa
+              {!isDm ? ' (tú también ves tu tirada).' : '.'}
+            </span>
+          </label>
+
+          <button type="button" className="vtt-btn-primary mt-3 w-full text-xs" onClick={onRoll}>
+            Tirar {dieType}
+          </button>
+
+          {!isDm && canRequestRoll ? (
+            <div className="mt-3 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface-warm)]/80 p-2">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]">
+                Pedir permiso al director
+              </p>
+              <label className="mt-2 block text-xs text-[var(--vtt-text-muted)]">
+                Motivo
+                <textarea
+                  className="vtt-input mt-1 min-h-[3.25rem] w-full resize-y text-[var(--vtt-text)]"
+                  rows={2}
+                  maxLength={400}
+                  placeholder="Ej.: ¿Puedo tirar Percepción para el pasillo?"
+                  value={rollReason}
+                  onChange={(e) => setRollReason(e.target.value)}
+                  aria-label="Motivo de la solicitud de tirada"
+                />
+              </label>
+              <p className="mt-1 text-[0.65rem] text-[var(--vtt-text-muted)]">
+                Se usa el dado y modo seleccionados arriba. El DM verá la petición y puede aprobarla
+                o ignorarla.
+              </p>
+              <button
+                type="button"
+                className="vtt-btn-secondary mt-2 w-full text-xs"
+                onClick={onRequestRoll}
+              >
+                Enviar solicitud
+              </button>
+            </div>
+          ) : null}
+
+          <div className="mt-3 border-t border-[var(--vtt-border-subtle)] pt-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]">
+              Historial
+            </p>
+            {recentRolls.length === 0 ? (
+              <p className="mt-1 text-xs text-[var(--vtt-text-muted)]">Aún no hay tiradas.</p>
+            ) : (
+              <ol className="mt-2 grid max-h-40 gap-1 overflow-auto pr-1">
+                {recentRolls.map((roll) => {
+                  const isOwnSecretPlayer =
+                    Boolean(roll.secret) &&
+                    !isDm &&
+                    playerSessionId &&
+                    roll.playerSessionId === playerSessionId
+                  const showDmSecretBadge = Boolean(roll.secret) && isDm
+                  return (
+                    <li
+                      key={roll.id}
+                      className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] px-2 py-1 text-xs text-[var(--vtt-text)]"
+                    >
+                      <span className="font-semibold text-[var(--vtt-gold)]">{roll.roller}</span>{' '}
+                      tira {roll.dieType} ({modeLabel(roll.mode)}):{' '}
+                      {roll.rolls.length > 1 ? `${roll.rolls.join('/')} → ` : ''}
+                      <span className="font-semibold">{roll.total}</span>
+                      {showDmSecretBadge ? (
+                        <span
+                          className="ml-1.5 inline-block rounded-sm border border-[var(--vtt-gold-dim)] bg-[var(--vtt-surface-warm)] px-1.5 py-0.5 font-vtt-display text-[0.6rem] font-semibold uppercase tracking-wide text-[var(--vtt-gold)]"
+                          title="Los demás jugadores no ven esta tirada en el historial"
+                        >
+                          Oculta
+                        </span>
+                      ) : null}
+                      {isOwnSecretPlayer ? (
+                        <span className="ml-1 text-[0.65rem] text-[var(--vtt-text-muted)]">
+                          (no visible para el resto)
+                        </span>
+                      ) : null}
+                    </li>
+                  )
+                })}
+              </ol>
+            )}
+          </div>
         </div>
       ) : null}
     </section>

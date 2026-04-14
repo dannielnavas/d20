@@ -19,7 +19,9 @@ export function registerClaimHandler(io: Server, socket: Socket) {
     const roomId = (socket.data as VttSocketData).roomId
     const data = socket.data as VttSocketData
     if (!roomId) {
-      socket.emit('claimError', { message: 'Primero entra a una mesa y vuelve a elegir personaje.' })
+      socket.emit('claimError', {
+        message: 'Primero entra a una mesa y vuelve a elegir personaje.',
+      })
       return
     }
     if (data.isDm) {

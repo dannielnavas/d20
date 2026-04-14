@@ -69,8 +69,7 @@ export function registerPollHandlers(io: Server, socket: Socket) {
 
     if (typeof payload !== 'object' || payload === null) return
     const o = payload as Record<string, unknown>
-    const question =
-      typeof o.question === 'string' ? o.question.trim().slice(0, MAX_Q) : ''
+    const question = typeof o.question === 'string' ? o.question.trim().slice(0, MAX_Q) : ''
     if (!question) return
 
     const options = parseOptions(o.options)
@@ -83,10 +82,7 @@ export function registerPollHandlers(io: Server, socket: Socket) {
 
     let timeoutSeconds: number | null = null
     if (o.timeoutSeconds !== undefined && o.timeoutSeconds !== null) {
-      const n =
-        typeof o.timeoutSeconds === 'number'
-          ? o.timeoutSeconds
-          : Number(o.timeoutSeconds)
+      const n = typeof o.timeoutSeconds === 'number' ? o.timeoutSeconds : Number(o.timeoutSeconds)
       if (!Number.isFinite(n) || n < 0) return
       if (n === 0) timeoutSeconds = null
       else {
@@ -160,7 +156,11 @@ export function registerPollHandlers(io: Server, socket: Socket) {
     const q = room.activePoll.question
     clearPollTimer(roomId)
     room.activePoll = null
-    appendActivity(room, 'system', `Votación cerrada: «${q.slice(0, 80)}${q.length > 80 ? '…' : ''}».`)
+    appendActivity(
+      room,
+      'system',
+      `Votación cerrada: «${q.slice(0, 80)}${q.length > 80 ? '…' : ''}».`,
+    )
     broadcastRoomState(io, room)
   })
 }

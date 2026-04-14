@@ -268,8 +268,7 @@ export function TokensLayer({
           onKeyDown={onTokenKeyDown}
           reactionBurst={reactionByToken[t.id] ?? null}
           handRaised={
-            showRaiseHandForDm &&
-            Boolean(t.claimedBy && raisedHands.includes(t.claimedBy))
+            showRaiseHandForDm && Boolean(t.claimedBy && raisedHands.includes(t.claimedBy))
           }
         />
       ))}

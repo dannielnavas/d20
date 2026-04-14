@@ -134,11 +134,7 @@ const DEFAULT_VISUAL: Omit<ConditionVisualDef, 'labels'> = {
 }
 
 function normalizeLabel(s: string): string {
-  return s
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{M}/gu, '')
+  return s.trim().toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
 }
 
 export function resolveConditionVisual(raw: string): ConditionVisualDef {

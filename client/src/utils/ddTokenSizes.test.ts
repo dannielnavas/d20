@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  ddCategoryFromPixelSize,
-  pixelSizeFromDdCategory,
-} from './ddTokenSizes'
+import { ddCategoryFromPixelSize, pixelSizeFromDdCategory } from './ddTokenSizes'
 
 describe('ddTokenSizes', () => {
   it('calcula px a partir de grid y categoría (ej. grid 50)', () => {

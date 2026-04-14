@@ -6,10 +6,7 @@ import { ChatPanel } from '../chat/ChatPanel'
 import { PrivateNotesPanel } from '../chat/PrivateNotesPanel'
 import { DicePanel } from '../dice/DicePanel'
 import { DmTurnTimerBar } from '../timer/DmTurnTimerBar'
-import {
-  type DmHudToolId,
-  useDmHudPreferences,
-} from '../../hooks/useDmHudPreferences'
+import { type DmHudToolId, useDmHudPreferences } from '../../hooks/useDmHudPreferences'
 import { MapDmVideoAudioCard } from './MapDmVideoAudioCard'
 import { RollRequestInbox } from './RollRequestInbox'
 import { ImageRevealTool } from '../reveal/ImageRevealTool'
@@ -84,13 +81,7 @@ export function DmHudColumn({
         case 'dice':
           return (
             <DmCollapsibleCard roomId={roomId} sectionId="dice" title={prefs.labels.dice}>
-              <DicePanel
-                socket={socket}
-                roomState={roomState}
-                isDm
-                layout="dock"
-                nestedInHud
-              />
+              <DicePanel socket={socket} roomState={roomState} isDm layout="dock" nestedInHud />
             </DmCollapsibleCard>
           )
         case 'mapAudio':
@@ -265,8 +256,8 @@ export function DmHudColumn({
               Herramientas del director
             </h2>
             <p className="mt-2 text-xs leading-relaxed text-[var(--vtt-text-muted)]">
-              Activa o quita bloques y cambia el orden en la columna derecha (temporizador, audio del
-              mapa, dados, notas y chat).
+              Activa o quita bloques y cambia el orden en la columna derecha (temporizador, audio
+              del mapa, dados, notas y chat).
             </p>
 
             <div className="mt-4 space-y-2">
@@ -331,7 +322,11 @@ export function DmHudColumn({
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2 border-t border-[var(--vtt-border-subtle)] pt-4">
-              <button type="button" className="vtt-btn-secondary text-xs" onClick={prefs.resetDefaults}>
+              <button
+                type="button"
+                className="vtt-btn-secondary text-xs"
+                onClick={prefs.resetDefaults}
+              >
                 Restablecer orden por defecto
               </button>
               <button

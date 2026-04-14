@@ -335,7 +335,11 @@ export function ChatPanel({
                   autoComplete="off"
                 />
               </div>
-              <button type="button" className="vtt-btn-primary shrink-0 px-3 text-xs" onClick={send}>
+              <button
+                type="button"
+                className="vtt-btn-primary shrink-0 px-3 text-xs"
+                onClick={send}
+              >
                 Enviar
               </button>
             </div>

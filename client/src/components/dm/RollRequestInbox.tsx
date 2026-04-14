@@ -19,39 +19,39 @@ export function RollRequestInbox({ socket, requests, embedded = false }: RollReq
 
   const list = (
     <ul className="max-h-64 space-y-2 overflow-y-auto pr-1 [scrollbar-gutter:stable]">
-        {requests.map((r) => (
-          <li
-            key={r.id}
-            className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface-warm)] p-2 text-xs text-[var(--vtt-text)]"
-          >
-            <p className="font-semibold text-[var(--vtt-gold)]">{r.fromLabel}</p>
-            <p className="mt-1 whitespace-pre-wrap text-[var(--vtt-text)]">{r.reason}</p>
-            <p className="mt-1 font-mono text-[0.7rem] text-[var(--vtt-text-muted)]">
-              {r.dieType}
-              {r.dieType === 'd20' && r.mode !== 'normal' ? ` · ${modeShort(r.mode)}` : ''}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                className="vtt-btn-primary text-[0.65rem] px-2 py-1"
-                onClick={() =>
-                  socket.emit('rollRequestResolve', { requestId: r.id, action: 'approve' })
-                }
-              >
-                Aprobar
-              </button>
-              <button
-                type="button"
-                className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-[var(--vtt-bg)] px-2 py-1 text-[0.65rem] font-semibold text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold-dim)] hover:text-[var(--vtt-text)]"
-                onClick={() =>
-                  socket.emit('rollRequestResolve', { requestId: r.id, action: 'dismiss' })
-                }
-              >
-                Ignorar
-              </button>
-            </div>
-          </li>
-        ))}
+      {requests.map((r) => (
+        <li
+          key={r.id}
+          className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface-warm)] p-2 text-xs text-[var(--vtt-text)]"
+        >
+          <p className="font-semibold text-[var(--vtt-gold)]">{r.fromLabel}</p>
+          <p className="mt-1 whitespace-pre-wrap text-[var(--vtt-text)]">{r.reason}</p>
+          <p className="mt-1 font-mono text-[0.7rem] text-[var(--vtt-text-muted)]">
+            {r.dieType}
+            {r.dieType === 'd20' && r.mode !== 'normal' ? ` · ${modeShort(r.mode)}` : ''}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              className="vtt-btn-primary text-[0.65rem] px-2 py-1"
+              onClick={() =>
+                socket.emit('rollRequestResolve', { requestId: r.id, action: 'approve' })
+              }
+            >
+              Aprobar
+            </button>
+            <button
+              type="button"
+              className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-[var(--vtt-bg)] px-2 py-1 text-[0.65rem] font-semibold text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold-dim)] hover:text-[var(--vtt-text)]"
+              onClick={() =>
+                socket.emit('rollRequestResolve', { requestId: r.id, action: 'dismiss' })
+              }
+            >
+              Ignorar
+            </button>
+          </div>
+        </li>
+      ))}
     </ul>
   )
 

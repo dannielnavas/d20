@@ -54,7 +54,8 @@ export function migrateRoomToScenes(room: RoomState): void {
     backgroundUrl: typeof ls.backgroundUrl === 'string' ? ls.backgroundUrl : '',
     backgroundType: ls.backgroundType === 'video' ? 'video' : 'image',
     mapAudioEnabled: Boolean(ls.mapAudioEnabled),
-    mapVolume: typeof ls.mapVolume === 'number' && Number.isFinite(ls.mapVolume) ? ls.mapVolume : 70,
+    mapVolume:
+      typeof ls.mapVolume === 'number' && Number.isFinite(ls.mapVolume) ? ls.mapVolume : 70,
     gridSize: typeof ls.gridSize === 'number' && Number.isFinite(ls.gridSize) ? ls.gridSize : 50,
     snapToGrid: ls.snapToGrid !== false,
   }

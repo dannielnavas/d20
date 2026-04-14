@@ -2,27 +2,27 @@
 
 ## Cliente → servidor
 
-| Evento                                         | Payload                                                              | Notas                     |
-| ---------------------------------------------- | -------------------------------------------------------------------- | ------------------------- |
-| `joinRoom`                                     | `{ roomId, dmKey? \| dmToken?, playerSessionId?, sessionPassword?, spectator? }` | `spectator: true` = solo lectura (stream). Contraseña de sesión si la mesa está protegida. |
-| `tokenMove` / `tokenMoveEnd`                   | `{ tokenId, x, y }`                                                  | Movimiento de ficha       |
-| `claimPc`                                      | `{ tokenId }`                                                        | Jugador elige PC          |
-| `diceRoll`                                     | `{ dieType, mode }`                                                  | Tirada                    |
-| `diceLogReset`                                 | —                                                                    | Solo DM                   |
-| `chatMessage`                                  | `{ text }`                                                           | Chat de mesa              |
-| `mapPing`                                      | `{ x, y }`                                                           | Ping en coordenadas mundo; jugadores solo si `settings.playersCanPing` |
-| `initiativeRollAll`                            | —                                                                    | DM: orden por d20 (+ modificadores) |
-| `initiativeSetModifier`                        | `{ tokenId, modifier }`                                              | DM: mod numérico por PJ   |
-| `initiativeNext` / `initiativeMove` / `initiativeSetCurrent` / `initiativeToggleVisibility` | ver código | DM |
-| `tokenSetConditions`                           | `{ tokenId, conditions: string[] }`                                  | DM o PJ propio token      |
-| `updateRoomSettings`, `spawnPc`, `spawnNpc`, … | ver `socket-dm.ts`                                                   | DM                        |
+| Evento                                                                                      | Payload                                                                          | Notas                                                                                      |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `joinRoom`                                                                                  | `{ roomId, dmKey? \| dmToken?, playerSessionId?, sessionPassword?, spectator? }` | `spectator: true` = solo lectura (stream). Contraseña de sesión si la mesa está protegida. |
+| `tokenMove` / `tokenMoveEnd`                                                                | `{ tokenId, x, y }`                                                              | Movimiento de ficha                                                                        |
+| `claimPc`                                                                                   | `{ tokenId }`                                                                    | Jugador elige PC                                                                           |
+| `diceRoll`                                                                                  | `{ dieType, mode }`                                                              | Tirada                                                                                     |
+| `diceLogReset`                                                                              | —                                                                                | Solo DM                                                                                    |
+| `chatMessage`                                                                               | `{ text }`                                                                       | Chat de mesa                                                                               |
+| `mapPing`                                                                                   | `{ x, y }`                                                                       | Ping en coordenadas mundo; jugadores solo si `settings.playersCanPing`                     |
+| `initiativeRollAll`                                                                         | —                                                                                | DM: orden por d20 (+ modificadores)                                                        |
+| `initiativeSetModifier`                                                                     | `{ tokenId, modifier }`                                                          | DM: mod numérico por PJ                                                                    |
+| `initiativeNext` / `initiativeMove` / `initiativeSetCurrent` / `initiativeToggleVisibility` | ver código                                                                       | DM                                                                                         |
+| `tokenSetConditions`                                                                        | `{ tokenId, conditions: string[] }`                                              | DM o PJ propio token                                                                       |
+| `updateRoomSettings`, `spawnPc`, `spawnNpc`, …                                              | ver `socket-dm.ts`                                                               | DM                                                                                         |
 
 ## Servidor → cliente
 
 | Evento                                                | Contenido                                                           |
 | ----------------------------------------------------- | ------------------------------------------------------------------- |
 | `roomState`                                           | `RoomState` público (`roomVersion`, tokens sin `ownerSocket`, etc.) |
-| `sessionState`                                        | Rol: `dm` \| `player` \| `spectator` + `claimedTokenId`           |
+| `sessionState`                                        | Rol: `dm` \| `player` \| `spectator` + `claimedTokenId`             |
 | `roomError` / `tokenError` / `claimError` / `dmError` | Errores                                                             |
 | `diceRolled`                                          | Entrada de log de tirada                                            |
 | `tokenMove` / `tokenMoveEnd`                          | Posición optimista                                                  |
