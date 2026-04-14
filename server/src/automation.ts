@@ -1,7 +1,9 @@
+import { randomInt, randomUUID } from 'crypto'
 import type { Express, Request, Response } from 'express'
 import type { Server } from 'socket.io'
-import { publicRoomState } from './room-session-password.js'
+import { broadcastRoomState, emitDiceRolled } from './room-broadcast.js'
 import { getOrCreateRoom } from './rooms.js'
+import { findTokenInRoom, getActiveScene } from './scene-helpers.js'
 import { snapToGrid } from './snap.js'
 import type { DiceMode, DieType } from './types.js'
 
@@ -43,13 +45,14 @@ async function hasDmInRoom(io: Server, roomId: string): Promise<boolean> {
 }
 
 function rollValue(max: number): number {
-  return Math.floor(Math.random() * max) + 1
+  return randomInt(1, max + 1)
 }
 
 function parseDicePayload(payload: Record<string, unknown>): {
   dieType: DieType
   mode: DiceMode
   roller: string
+  secret: boolean
 } | null {
   if (typeof payload.dieType !== 'string' || !DIE_TYPES.includes(payload.dieType as DieType)) {
     return null
@@ -64,7 +67,8 @@ function parseDicePayload(payload: Record<string, unknown>): {
     typeof payload.roller === 'string' && payload.roller.trim()
       ? payload.roller.trim().slice(0, 64)
       : 'Stream Deck'
-  return { dieType, mode, roller }
+  const secret = payload.secret === true
+  return { dieType, mode, roller, secret }
 }
 
 function parseMapCenterPayload(payload: Record<string, unknown>): {
@@ -105,7 +109,9 @@ export function registerAutomationApi(app: Express, io: Server): void {
 
     const envelope = parseEnvelope(req.body)
     if (!envelope) {
-      res.status(400).json({ ok: false, error: 'Payload inválido: action, roomId y payload son requeridos' })
+      res
+        .status(400)
+        .json({ ok: false, error: 'Payload inválido: action, roomId y payload son requeridos' })
       return
     }
 
@@ -140,7 +146,7 @@ export function registerAutomationApi(app: Express, io: Server): void {
           room.initiative.currentIndex === null
             ? 0
             : (room.initiative.currentIndex + 1) % room.initiative.order.length
-        io.to(room.roomId).emit('roomState', publicRoomState(room))
+        broadcastRoomState(io, room)
         res.json({ ok: true, action: envelope.action })
         return
       }
@@ -151,7 +157,7 @@ export function registerAutomationApi(app: Express, io: Server): void {
           return
         }
         room.initiative.visible = envelope.payload.visible
-        io.to(room.roomId).emit('roomState', publicRoomState(room))
+        broadcastRoomState(io, room)
         res.json({ ok: true, action: envelope.action, visible: room.initiative.visible })
         return
       }
@@ -172,33 +178,36 @@ export function registerAutomationApi(app: Express, io: Server): void {
               ? Math.max(first, second)
               : Math.min(first, second)
         const entry = {
-          id: `roll-automation-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          id: `roll-automation-${randomUUID().replace(/-/g, '').slice(0, 16)}`,
           roller: parsed.roller,
           dieType: parsed.dieType,
           mode: parsed.mode,
           rolls: second === null ? [first] : [first, second],
           total,
           timestamp: Date.now(),
+          ...(parsed.secret ? { secret: true as const } : {}),
         }
         room.diceLog.unshift(entry)
         if (room.diceLog.length > 20) room.diceLog = room.diceLog.slice(0, 20)
-        io.to(room.roomId).emit('diceRolled', entry)
-        io.to(room.roomId).emit('roomState', publicRoomState(room))
+        void emitDiceRolled(io, room.roomId, entry, null).then(() => {
+          broadcastRoomState(io, room)
+        })
         res.json({ ok: true, action: envelope.action, result: entry })
         return
       }
 
       case 'media.playPause': {
+        const ms = getActiveScene(room).settings
         if (typeof envelope.payload.enabled === 'boolean') {
-          room.settings.mapAudioEnabled = envelope.payload.enabled
+          ms.mapAudioEnabled = envelope.payload.enabled
         } else {
-          room.settings.mapAudioEnabled = !room.settings.mapAudioEnabled
+          ms.mapAudioEnabled = !ms.mapAudioEnabled
         }
-        io.to(room.roomId).emit('roomState', publicRoomState(room))
+        broadcastRoomState(io, room)
         res.json({
           ok: true,
           action: envelope.action,
-          mapAudioEnabled: room.settings.mapAudioEnabled,
+          mapAudioEnabled: ms.mapAudioEnabled,
         })
         return
       }
@@ -209,9 +218,10 @@ export function registerAutomationApi(app: Express, io: Server): void {
           res.status(400).json({ ok: false, error: 'volume debe ser numérico' })
           return
         }
-        room.settings.mapVolume = Math.min(100, Math.max(0, Math.round(volume)))
-        io.to(room.roomId).emit('roomState', publicRoomState(room))
-        res.json({ ok: true, action: envelope.action, mapVolume: room.settings.mapVolume })
+        const ms = getActiveScene(room).settings
+        ms.mapVolume = Math.min(100, Math.max(0, Math.round(volume)))
+        broadcastRoomState(io, room)
+        res.json({ ok: true, action: envelope.action, mapVolume: ms.mapVolume })
         return
       }
 
@@ -221,15 +231,16 @@ export function registerAutomationApi(app: Express, io: Server): void {
           res.status(400).json({ ok: false, error: 'tokenId es requerido' })
           return
         }
-        const token = room.tokens.find((t) => t.id === parsed.tokenId)
+        const token = findTokenInRoom(room, parsed.tokenId)
         if (!token) {
           res.status(404).json({ ok: false, error: 'Token no encontrado' })
           return
         }
         const baseX = parsed.x ?? 800
         const baseY = parsed.y ?? 450
-        if (room.settings.snapToGrid) {
-          const snapped = snapToGrid(baseX, baseY, room.settings.gridSize)
+        const ms = getActiveScene(room).settings
+        if (ms.snapToGrid) {
+          const snapped = snapToGrid(baseX, baseY, ms.gridSize)
           token.x = snapped.x
           token.y = snapped.y
         } else {
@@ -237,6 +248,7 @@ export function registerAutomationApi(app: Express, io: Server): void {
           token.y = baseY
         }
         io.to(room.roomId).emit('tokenMoveEnd', { tokenId: token.id, x: token.x, y: token.y })
+        broadcastRoomState(io, room)
         res.json({ ok: true, action: envelope.action, tokenId: token.id, x: token.x, y: token.y })
         return
       }

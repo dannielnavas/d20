@@ -12,8 +12,7 @@ export function DmMapPreview({ settings, className = '' }: DmMapPreviewProps) {
   const url = backgroundUrl.trim()
   const hasMedia = Boolean(url)
 
-  const youtubeParsed =
-    hasMedia && backgroundType === 'video' ? parseYoutubeUrl(url) : null
+  const youtubeParsed = hasMedia && backgroundType === 'video' ? parseYoutubeUrl(url) : null
 
   const ytEmbedSrc = useMemo(() => {
     if (!youtubeParsed) return ''

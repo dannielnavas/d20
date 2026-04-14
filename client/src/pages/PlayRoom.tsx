@@ -1,107 +1,104 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { io, type Socket } from 'socket.io-client'
 import { CharacterLobby } from '../components/lobby/CharacterLobby'
 import { MapBoard } from '../components/board/MapBoard'
+import { GroupPollPanel } from '../components/poll/GroupPollPanel'
 import { InitiativePanel } from '../components/initiative/InitiativePanel'
 import { MediaDock } from '../components/media/MediaDock'
 import { DicePanel } from '../components/dice/DicePanel'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { ChatPanel } from '../components/chat/ChatPanel'
+import { PrivateNotesPanel } from '../components/chat/PrivateNotesPanel'
+import { DmHudColumn } from '../components/dm/DmHudColumn'
+import { ScreenReactionOverlay } from '../components/reactions/ScreenReactionOverlay'
+import { ImageRevealModal } from '../components/reveal/ImageRevealModal'
+import { ImageRevealTool } from '../components/reveal/ImageRevealTool'
+import { TurnTimerHud } from '../components/timer/TurnTimerHud'
 import { usePlayerSessionId } from '../hooks/usePlayerSessionId'
-import type { RoomState, Token } from '../types/room'
-import type { SessionState } from '../types/session'
-
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? 'http://localhost:3000'
-const D20_ROLL_GIF =
-  'https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbzJqN2d2cXVhbWd6c3ljMDl1N3pjazB4b3AzNTAzZjBiamxxOWJ2dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/oOBTO2UcSoaBJewZT0/giphy.gif'
-
-type TokenPosEvent = { tokenId: string; x: number; y: number }
-
-const sessionPwdStorageKey = (id: string) => `d20-vtt-session-pwd-${id}`
-
-function parseSessionState(payload: unknown): SessionState | null {
-  if (typeof payload !== 'object' || payload === null) return null
-  const o = payload as Record<string, unknown>
-  if (o.role !== 'dm' && o.role !== 'player') return null
-  let claimedTokenId: string | null = null
-  if (typeof o.claimedTokenId === 'string' && o.claimedTokenId.length > 0) {
-    claimedTokenId = o.claimedTokenId
-  }
-  return {
-    role: o.role,
-    claimedTokenId,
-  }
-}
-
-function parseDiceLogEntry(payload: unknown): RoomState['diceLog'][number] | null {
-  if (typeof payload !== 'object' || payload === null) return null
-  const o = payload as Record<string, unknown>
-  if (
-    typeof o.id !== 'string' ||
-    typeof o.roller !== 'string' ||
-    typeof o.dieType !== 'string' ||
-    typeof o.mode !== 'string' ||
-    !Array.isArray(o.rolls) ||
-    typeof o.total !== 'number' ||
-    typeof o.timestamp !== 'number'
-  ) {
-    return null
-  }
-  return o as RoomState['diceLog'][number]
-}
+import { D20_ROLL_GIF, sessionPwdStorageKey } from '../hooks/playroom/constants'
+import { useChatMentionNotify } from '../hooks/playroom/useChatMentionNotify'
+import { useInitiativeTurnNotify } from '../hooks/playroom/useInitiativeTurnNotify'
+import { useDmTokenExchange } from '../hooks/playroom/useDmTokenExchange'
+import { usePlayRoomSocket } from '../hooks/playroom/usePlayRoomSocket'
+import { useRollFx } from '../hooks/playroom/useRollFx'
+import type { Token } from '../types/room'
+import { allPlayerCharacters } from '../utils/roomTokens'
 
 export function PlayRoom() {
   const { roomId = '' } = useParams<{ roomId: string }>()
   const [searchParams] = useSearchParams()
   const dmKeyFromUrl = searchParams.get('key') ?? ''
-  const wantsDm =
-    searchParams.get('role') === 'dm' && dmKeyFromUrl.length > 0
+  const wantsDm = searchParams.get('role') === 'dm' && dmKeyFromUrl.length > 0
+  const wantsSpectator =
+    searchParams.get('spectator') === '1' || searchParams.get('spectator') === 'true'
 
-  const playerSessionId = usePlayerSessionId(roomId, !wantsDm)
+  const playerSessionId = usePlayerSessionId(roomId, !wantsDm && !wantsSpectator)
+  const dmToken = useDmTokenExchange(roomId, wantsDm, dmKeyFromUrl)
 
-  const [state, setState] = useState<RoomState | null>(null)
-  const [session, setSession] = useState<SessionState | null>(null)
-  const [socket, setSocket] = useState<Socket | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [connected, setConnected] = useState(false)
-  const [claimingId, setClaimingId] = useState<string | null>(null)
   const [appliedSessionPassword, setAppliedSessionPassword] = useState('')
-  const [passwordGate, setPasswordGate] = useState(false)
   const [passwordInput, setPasswordInput] = useState('')
   const [rememberSessionPwd, setRememberSessionPwd] = useState(false)
-  const [rollFx, setRollFx] = useState<RoomState['diceLog'][number] | null>(null)
-  const [rollFxReveal, setRollFxReveal] = useState(false)
-  const lastRollIdRef = useRef<string | null>(null)
-  const rollFxTimerRef = useRef<number | null>(null)
-  const rollFxRevealTimerRef = useRef<number | null>(null)
-  const ROLL_REVEAL_MS = 2500
-  const ROLL_HIDE_MS = 3700
-  const SPECIAL_TEXT_HOLD_MS = 4000
-  const triggerRollFx = useCallback((entry: RoomState['diceLog'][number]) => {
-    lastRollIdRef.current = entry.id
-    setRollFxReveal(false)
-    setRollFx(entry)
-    if (rollFxRevealTimerRef.current !== null) {
-      window.clearTimeout(rollFxRevealTimerRef.current)
+
+  const { rollFx, rollFxReveal, triggerRollFx, lastRollIdRef } = useRollFx()
+
+  const joinPayload = useMemo(() => {
+    if (!roomId) return null
+    const pwd = appliedSessionPassword.trim()
+    const pwdPart = pwd ? { sessionPassword: pwd } : {}
+    if (wantsDm) {
+      if (dmToken) return { roomId, dmToken, ...pwdPart }
+      return { roomId, dmKey: dmKeyFromUrl, ...pwdPart }
     }
-    rollFxRevealTimerRef.current = window.setTimeout(() => {
-      setRollFxReveal(true)
-      rollFxRevealTimerRef.current = null
-    }, ROLL_REVEAL_MS)
-    if (rollFxTimerRef.current !== null) {
-      window.clearTimeout(rollFxTimerRef.current)
-    }
-    const isSpecialD20 =
-      entry.dieType === 'd20' && (entry.total === 20 || entry.total === 1)
-    const hideAfterMs = isSpecialD20
-      ? ROLL_REVEAL_MS + SPECIAL_TEXT_HOLD_MS
-      : ROLL_HIDE_MS
-    rollFxTimerRef.current = window.setTimeout(() => {
-      setRollFx(null)
-      setRollFxReveal(false)
-      rollFxTimerRef.current = null
-    }, hideAfterMs)
-  }, [ROLL_HIDE_MS, ROLL_REVEAL_MS, SPECIAL_TEXT_HOLD_MS])
+    if (wantsSpectator) return { roomId, spectator: true, ...pwdPart }
+    if (playerSessionId) return { roomId, playerSessionId, ...pwdPart }
+    return null
+  }, [
+    appliedSessionPassword,
+    dmKeyFromUrl,
+    dmToken,
+    playerSessionId,
+    roomId,
+    wantsDm,
+    wantsSpectator,
+  ])
+
+  const {
+    state,
+    setState,
+    session,
+    socket,
+    error,
+    setError,
+    connected,
+    claimingId,
+    setClaimingId,
+    passwordGate,
+    setPasswordGate,
+    privateNotesPlayerPair,
+    privateNotesDmBySession,
+    turnTimer,
+    rollRequestFeedback,
+    clearRollRequestFeedback,
+    imageReveal,
+    dismissImageReveal,
+    screenReactionBursts,
+  } = usePlayRoomSocket(joinPayload, triggerRollFx, lastRollIdRef)
+
+  const [notificationPermission, setNotificationPermission] = useState<
+    NotificationPermission | 'unsupported'
+  >(() =>
+    typeof Notification !== 'undefined' ? Notification.permission : 'unsupported',
+  )
+
+  useInitiativeTurnNotify(state, session)
+
+  const [chatExpanded, setChatExpanded] = useState(true)
+  const { toast: mentionToast, dismissToast: dismissMentionToast } = useChatMentionNotify(
+    state,
+    session,
+    playerSessionId,
+    chatExpanded,
+  )
 
   useEffect(() => {
     if (!roomId) {
@@ -113,141 +110,13 @@ export function PlayRoom() {
     setAppliedSessionPassword(sessionStorage.getItem(sessionPwdStorageKey(roomId)) ?? '')
     setPasswordGate(false)
     setPasswordInput('')
-  }, [roomId])
-
-  const joinPayload = useMemo(() => {
-    if (!roomId) return null
-    const pwd = appliedSessionPassword.trim()
-    const pwdPart = pwd ? { sessionPassword: pwd } : {}
-    if (wantsDm) return { roomId, dmKey: dmKeyFromUrl, ...pwdPart }
-    if (playerSessionId) return { roomId, playerSessionId, ...pwdPart }
-    return null
-  }, [appliedSessionPassword, dmKeyFromUrl, playerSessionId, roomId, wantsDm])
-
-  useEffect(() => {
-    if (!joinPayload) return
-
-    setState(null)
-    setSession(null)
-    setError(null)
-    setClaimingId(null)
-
-    const s = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
-    })
-    setSocket(s)
-
-    const onConnect = () => setConnected(true)
-    const onDisconnect = () => setConnected(false)
-    const onRoomState = (payload: RoomState) => {
-      setState(payload)
-      setError(null)
-      setPasswordGate(false)
-    }
-    const onRoomError = (payload: { message?: string; code?: string }) => {
-      const code = payload?.code
-      if (code === 'SESSION_PASSWORD_REQUIRED' || code === 'SESSION_PASSWORD_INVALID') {
-        setPasswordGate(true)
-      }
-      setError(payload?.message ?? 'Error de sala')
-    }
-    const onTokenError = (payload: { message?: string }) => {
-      setError(payload?.message ?? 'No autorizado para mover ese token')
-    }
-    const onClaimError = (payload: { message?: string }) => {
-      setClaimingId(null)
-      setError(payload?.message ?? 'No se pudo reclamar el personaje')
-    }
-    const onDmError = (payload: { message?: string }) => {
-      setError(payload?.message ?? 'Acción de DM rechazada')
-    }
-
-    const applyTokenPos = ({ tokenId, x, y }: TokenPosEvent) => {
-      setState((prev) => {
-        if (!prev) return prev
-        return {
-          ...prev,
-          tokens: prev.tokens.map((t) =>
-            t.id === tokenId ? { ...t, x, y } : t,
-          ),
-        }
-      })
-    }
-
-    const onTokenMove = (p: TokenPosEvent) => applyTokenPos(p)
-    const onTokenMoveEnd = (p: TokenPosEvent) => applyTokenPos(p)
-
-    const onSessionState = (raw: unknown) => {
-      const parsed = parseSessionState(raw)
-      if (parsed) setSession(parsed)
-      setClaimingId(null)
-    }
-    const onDiceRolled = (raw: unknown) => {
-      const parsed = parseDiceLogEntry(raw)
-      if (!parsed) return
-      triggerRollFx(parsed)
-    }
-
-    s.on('connect', onConnect)
-    s.on('disconnect', onDisconnect)
-    s.on('roomState', onRoomState)
-    s.on('roomError', onRoomError)
-    s.on('tokenError', onTokenError)
-    s.on('claimError', onClaimError)
-    s.on('dmError', onDmError)
-    s.on('sessionState', onSessionState)
-    s.on('diceRolled', onDiceRolled)
-    s.on('tokenMove', onTokenMove)
-    s.on('tokenMoveEnd', onTokenMoveEnd)
-
-    s.emit('joinRoom', joinPayload)
-
-    return () => {
-      s.off('connect', onConnect)
-      s.off('disconnect', onDisconnect)
-      s.off('roomState', onRoomState)
-      s.off('roomError', onRoomError)
-      s.off('tokenError', onTokenError)
-      s.off('claimError', onClaimError)
-      s.off('dmError', onDmError)
-      s.off('sessionState', onSessionState)
-      s.off('diceRolled', onDiceRolled)
-      s.off('tokenMove', onTokenMove)
-      s.off('tokenMoveEnd', onTokenMoveEnd)
-      s.disconnect()
-      setSocket(null)
-      setConnected(false)
-    }
-  }, [joinPayload, triggerRollFx])
+  }, [roomId, setPasswordGate])
 
   useEffect(() => {
     if (passwordGate) {
       setPasswordInput(appliedSessionPassword)
     }
   }, [appliedSessionPassword, passwordGate])
-
-  useEffect(() => {
-    const latest = state?.diceLog?.[0]
-    if (!latest) return
-    if (lastRollIdRef.current === null) {
-      triggerRollFx(latest)
-      return
-    }
-    if (lastRollIdRef.current === latest.id) return
-    triggerRollFx(latest)
-  }, [state?.diceLog, triggerRollFx])
-
-  useEffect(
-    () => () => {
-      if (rollFxRevealTimerRef.current !== null) {
-        window.clearTimeout(rollFxRevealTimerRef.current)
-      }
-      if (rollFxTimerRef.current !== null) {
-        window.clearTimeout(rollFxTimerRef.current)
-      }
-    },
-    [],
-  )
 
   const submitSessionPassword = useCallback(() => {
     if (!roomId) return
@@ -261,6 +130,7 @@ export function PlayRoom() {
   const canDragToken = useCallback(
     (token: Token) => {
       if (!session) return false
+      if (session.role === 'spectator') return false
       if (session.role === 'dm') return true
       if (token.type === 'npc') return false
       return session.claimedTokenId === token.id
@@ -275,7 +145,7 @@ export function PlayRoom() {
       setError(null)
       socket.emit('claimPc', { tokenId })
     },
-    [socket],
+    [socket, setClaimingId, setError],
   )
 
   const isDm = session?.role === 'dm'
@@ -309,35 +179,51 @@ export function PlayRoom() {
     socket.emit('initiativeNext')
   }, [isDm, socket])
 
+  const onInitiativeRollAll = useCallback(() => {
+    if (!socket || !isDm) return
+    socket.emit('initiativeRollAll')
+  }, [isDm, socket])
+
+  const onInitiativeSetModifier = useCallback(
+    (tokenId: string, modifier: number) => {
+      if (!socket || !isDm) return
+      socket.emit('initiativeSetModifier', { tokenId, modifier })
+    },
+    [isDm, socket],
+  )
+
   const onResetDiceLog = useCallback(() => {
     if (!socket || !isDm) return
     socket.emit('diceLogReset')
   }, [isDm, socket])
 
-  const showLobby =
-    Boolean(state && session?.role === 'player' && !session.claimedTokenId)
+  const showLobby = Boolean(state && session?.role === 'player' && !session.claimedTokenId)
 
-  const showMap =
-    Boolean(
-      state &&
-        session &&
-        (session.role === 'dm' || session.claimedTokenId !== null),
-    )
+  const showMap = Boolean(
+    state &&
+      session &&
+      (session.role === 'dm' ||
+        session.role === 'spectator' ||
+        session.claimedTokenId !== null),
+  )
 
-  const pcs = state?.tokens.filter((t) => t.type === 'pc') ?? []
+  const pcs = state ? allPlayerCharacters(state) : []
   const canUseDicePanel = Boolean(
     socket &&
       state &&
       showMap &&
+      session?.role !== 'spectator' &&
       (session?.role === 'dm' || (session?.role === 'player' && session.claimedTokenId)),
   )
 
   const sessionLabel =
     session?.role === 'dm'
-      ? 'Dungeon Master'
-      : session?.claimedTokenId
-        ? 'Jugador en mesa'
-        : 'Jugador, lobby de personajes'
+      ? 'Director de juego'
+      : session?.role === 'spectator'
+        ? 'Espectador: solo ves la mesa'
+        : session?.claimedTokenId
+          ? 'Jugador en la mesa'
+          : 'Elige tu personaje para entrar a la mesa'
   const isCriticalD20 = Boolean(
     rollFxReveal && rollFx && rollFx.dieType === 'd20' && rollFx.total === 20,
   )
@@ -358,11 +244,34 @@ export function PlayRoom() {
           </p>
           <p className="font-vtt-display mt-1 text-xl font-semibold tracking-wide text-[var(--vtt-text)]">
             <span className="font-mono text-[0.95em] font-normal text-[var(--vtt-gold)]">
-              {roomId || '(sin id)'}
+              {roomId || 'Sin identificador'}
             </span>
           </p>
           {session ? (
-            <p className="mt-2 text-sm text-[var(--vtt-text-muted)]">{sessionLabel}</p>
+            <>
+              <p className="mt-2 text-sm text-[var(--vtt-text-muted)]">{sessionLabel}</p>
+              {session.role === 'player' &&
+              session.claimedTokenId &&
+              notificationPermission === 'default' ? (
+                <button
+                  type="button"
+                  className="mt-2 text-left text-xs font-semibold text-[var(--vtt-gold)] underline decoration-[var(--vtt-gold-dim)] underline-offset-2 hover:text-[var(--vtt-text)]"
+                  onClick={() => {
+                    void Notification.requestPermission().then((p) => setNotificationPermission(p))
+                  }}
+                >
+                  Activar avisos del navegador cuando sea tu turno
+                </button>
+              ) : null}
+              {session.role === 'player' &&
+              session.claimedTokenId &&
+              notificationPermission === 'denied' ? (
+                <p className="mt-2 max-w-md text-xs text-[var(--vtt-text-muted)]">
+                  Notificaciones bloqueadas en el navegador. Si quieres avisos de turno, permite
+                  notificaciones para este sitio en la configuración del navegador.
+                </p>
+              ) : null}
+            </>
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-4">
@@ -373,7 +282,7 @@ export function PlayRoom() {
               onClick={onResetDiceLog}
               disabled={!state || state.diceLog.length === 0}
             >
-              Reset log dados
+              Borrar historial de tiradas
             </button>
           ) : null}
           <ThemeToggle />
@@ -421,9 +330,13 @@ export function PlayRoom() {
         id="contenido-sala"
         tabIndex={-1}
         className={`relative flex min-h-0 flex-1 flex-col items-center gap-6 outline-none ${
-          showMap ? 'pb-28' : ''
+          showMap || (showLobby && session?.role === 'player') ? 'pb-28' : ''
         }`}
       >
+        {state && turnTimer ? (
+          <TurnTimerHud remaining={turnTimer.remaining} totalSeconds={turnTimer.totalSeconds} />
+        ) : null}
+
         {rollFx ? (
           <div className="dice-roll-overlay" aria-hidden="true">
             <div className="dice-roll-overlay__panel">
@@ -438,13 +351,13 @@ export function PlayRoom() {
                     aria-hidden="true"
                     className="dice-roll-overlay__gif"
                   />
-                  <p className="dice-roll-overlay__value">d20...</p>
+                  <p className="dice-roll-overlay__value">Tirando…</p>
                 </>
               ) : (
                 <>
-                  {isCriticalD20 ? <p className="dice-roll-overlay__critical">Critico</p> : null}
+                  {isCriticalD20 ? <p className="dice-roll-overlay__critical">¡Crítico!</p> : null}
                   {isCriticalFailD20 ? (
-                    <p className="dice-roll-overlay__critical-fail">Daño Critico</p>
+                    <p className="dice-roll-overlay__critical-fail">Pifia</p>
                   ) : null}
                   <p className="dice-roll-overlay__value">
                     {rollFx.roller}: {rollFx.dieType} = {rollFx.total}
@@ -470,11 +383,14 @@ export function PlayRoom() {
                 Contraseña de la mesa
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-[var(--vtt-text-muted)]">
-                El DM ha protegido esta sesión. Introduce la misma contraseña que compartió con el
-                grupo (no es la clave secreta del DM).
+                El director de juego ha protegido esta mesa. Escribe la misma contraseña que compartió
+                con el grupo (no es la clave privada del director).
               </p>
               <div className="mt-5 flex flex-col gap-3">
-                <label htmlFor="gate-session-pwd" className="text-xs font-medium text-[var(--vtt-text-muted)]">
+                <label
+                  htmlFor="gate-session-pwd"
+                  className="text-xs font-medium text-[var(--vtt-text-muted)]"
+                >
                   Contraseña
                 </label>
                 <input
@@ -495,9 +411,13 @@ export function PlayRoom() {
                     onChange={(e) => setRememberSessionPwd(e.target.checked)}
                     className="size-4 rounded border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] text-[var(--vtt-gold)]"
                   />
-                  Recordar en este navegador (sessionStorage)
+                  Recordar en este navegador hasta que cierres la pestaña
                 </label>
-                <button type="button" onClick={submitSessionPassword} className="vtt-btn-primary w-full">
+                <button
+                  type="button"
+                  onClick={submitSessionPassword}
+                  className="vtt-btn-primary w-full"
+                >
                   Conectar
                 </button>
               </div>
@@ -507,32 +427,25 @@ export function PlayRoom() {
 
         {!joinPayload && (
           <p className="text-sm text-[var(--vtt-text-muted)]" role="status">
-            Preparando sesión…
+            Preparando tu acceso…
           </p>
         )}
 
         {socket && session && state && (showLobby || showMap) ? (
-          <div
-            className={
-              showMap ? 'contents' : 'w-full max-w-6xl shrink-0 px-0'
-            }
-          >
+          <div className={showMap ? 'contents' : 'w-full max-w-6xl shrink-0 px-0'}>
             <MediaDock
               socket={socket}
               session={session}
               roomState={state}
               layout={showMap ? 'map' : 'lobby'}
+              playerSessionId={!wantsDm && !wantsSpectator ? playerSessionId : null}
+              isDm={session.role === 'dm'}
             />
           </div>
         ) : null}
 
         {showLobby && state && playerSessionId && (
-          <CharacterLobby
-            roomId={roomId}
-            pcs={pcs}
-            claimingId={claimingId}
-            onClaim={onClaim}
-          />
+          <CharacterLobby roomId={roomId} pcs={pcs} claimingId={claimingId} onClaim={onClaim} />
         )}
 
         {showMap && state && socket && (
@@ -542,38 +455,215 @@ export function PlayRoom() {
             setRoomState={setState}
             canDragToken={canDragToken}
             isDm={isDm}
+            isSpectator={session?.role === 'spectator'}
+            suppressDmMapVideoChrome={isDm}
+            showReactionPalette={session?.role === 'player'}
           />
         )}
 
-        {showMap && state && socket && (
-          <InitiativePanel
-            initiative={state.initiative}
-            tokens={state.tokens.filter((t) => t.type === 'pc')}
+        {showMap && state && socket && session ? (
+          <GroupPollPanel
+            socket={socket}
+            roomState={state}
             isDm={isDm}
+            session={session}
+            suppressDmStarter={Boolean(isDm && showMap && !passwordGate)}
+          />
+        ) : null}
+
+        {showMap && state && socket && isDm && !passwordGate ? (
+          <DmHudColumn
+            roomId={roomId}
+            socket={socket}
+            roomState={state}
+            privateNotesDmBySession={privateNotesDmBySession}
+            timerActive={turnTimer !== null}
+            chatExpanded={chatExpanded}
+            onChatExpandedChange={setChatExpanded}
+            initiativeTokens={allPlayerCharacters(state)}
+            onInitiativeToggleVisibility={onInitiativeToggleVisibility}
+            onInitiativeMove={onInitiativeMove}
+            onInitiativeSetCurrent={onInitiativeSetCurrent}
+            onInitiativeNext={onInitiativeNext}
+            onInitiativeRollAll={onInitiativeRollAll}
+            onInitiativeSetModifier={onInitiativeSetModifier}
+          />
+        ) : null}
+
+        {showMap &&
+        state &&
+        socket &&
+        session?.role === 'player' &&
+        state.settings.playersCanRevealImage &&
+        session.claimedTokenId ? (
+          <div className="pointer-events-auto fixed bottom-28 left-3 z-[88] max-w-[min(18rem,calc(100vw-1rem))] sm:bottom-32">
+            <ImageRevealTool socket={socket} variant="player" />
+          </div>
+        ) : null}
+
+        {showMap && state && socket && !isDm ? (
+          <ChatPanel
+            socket={socket}
+            roomState={state}
+            open={showMap}
+            readOnly={session?.role === 'spectator'}
+            expanded={chatExpanded}
+            onExpandedChange={setChatExpanded}
+          />
+        ) : null}
+
+        {rollRequestFeedback ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`fixed bottom-40 z-[94] flex max-w-[min(20rem,calc(100vw-2rem))] items-start gap-3 rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)] ${
+              isDm ? 'left-4' : 'right-4'
+            }`}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="font-vtt-display text-xs font-semibold uppercase tracking-wide text-[var(--vtt-gold)]">
+                {rollRequestFeedback.outcome === 'approved'
+                  ? 'Solicitud aprobada'
+                  : 'Solicitud cerrada'}
+              </p>
+              {rollRequestFeedback.outcome === 'approved' ? (
+                <p className="mt-1 text-sm text-[var(--vtt-text)]">
+                  El director dio luz verde. Puedes tirar cuando quieras con el dado y modo que elegiste al
+                  enviar la solicitud
+                  {rollRequestFeedback.dieType ? (
+                    <>
+                      {' '}
+                      (<span className="font-mono">{rollRequestFeedback.dieType}</span>
+                      {rollRequestFeedback.dieType === 'd20' &&
+                      rollRequestFeedback.mode &&
+                      rollRequestFeedback.mode !== 'normal'
+                        ? rollRequestFeedback.mode === 'advantage'
+                          ? ', ventaja'
+                          : ', desventaja'
+                        : ''}
+                      ).
+                    </>
+                  ) : (
+                    '.'
+                  )}
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-[var(--vtt-text-muted)]">
+                  El director descartó esta petición. Si sigue en juego, pregunta de nuevo o por el chat.
+                </p>
+              )}
+              {rollRequestFeedback.reason ? (
+                <p className="mt-1 line-clamp-2 text-xs text-[var(--vtt-text-muted)]">
+                  «{rollRequestFeedback.reason}»
+                </p>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              className="shrink-0 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] px-2 py-1 text-xs font-semibold text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold)] hover:text-[var(--vtt-text)]"
+              onClick={clearRollRequestFeedback}
+            >
+              Cerrar
+            </button>
+          </div>
+        ) : null}
+
+        {mentionToast ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className={`fixed bottom-24 z-[95] flex max-w-[min(20rem,calc(100vw-2rem))] items-start gap-3 rounded-[var(--vtt-radius)] border border-[var(--vtt-gold)] bg-[var(--vtt-bg-elevated)] px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)] ${
+              isDm ? 'left-4' : 'right-4'
+            }`}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="font-vtt-display text-xs font-semibold uppercase tracking-wide text-[var(--vtt-gold)]">
+                Te mencionaron
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[var(--vtt-text)]">{mentionToast.author}</p>
+              <p className="mt-1 line-clamp-3 text-sm text-[var(--vtt-text-muted)]">{mentionToast.preview}</p>
+            </div>
+            <div className="flex shrink-0 flex-col gap-1">
+              <button
+                type="button"
+                className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] px-2 py-1 text-xs font-semibold text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold)] hover:text-[var(--vtt-text)]"
+                onClick={() => {
+                  dismissMentionToast()
+                  setChatExpanded(true)
+                }}
+              >
+                Abrir chat
+              </button>
+              <button
+                type="button"
+                className="text-xs text-[var(--vtt-text-muted)] underline-offset-2 hover:text-[var(--vtt-text)] hover:underline"
+                onClick={dismissMentionToast}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {socket && state && session?.role === 'dm' && !showMap ? (
+          <PrivateNotesPanel
+            variant="dm"
+            socket={socket}
+            roomState={state}
+            bySession={privateNotesDmBySession}
+            open
+          />
+        ) : null}
+
+        {socket && state && session?.role === 'player' && playerSessionId ? (
+          <PrivateNotesPanel
+            variant="player"
+            socket={socket}
+            pair={privateNotesPlayerPair}
+            open={showLobby || showMap}
+          />
+        ) : null}
+
+        {showMap && state && socket && !isDm ? (
+          <InitiativePanel
+            placement="floating"
+            initiative={state.initiative}
+            tokens={allPlayerCharacters(state)}
+            isDm={false}
             onToggleVisibility={onInitiativeToggleVisibility}
             onMove={onInitiativeMove}
             onSetCurrent={onInitiativeSetCurrent}
             onNext={onInitiativeNext}
+            onRollAll={onInitiativeRollAll}
+            onSetModifier={onInitiativeSetModifier}
           />
-        )}
+        ) : null}
 
-        {canUseDicePanel && socket && state ? (
-          <DicePanel socket={socket} roomState={state} />
+        {canUseDicePanel && socket && state && !(session?.role === 'dm' && showMap) ? (
+          <DicePanel
+            socket={socket}
+            roomState={state}
+            isDm={session?.role === 'dm'}
+            playerSessionId={session?.role === 'player' ? playerSessionId : null}
+            canRequestRoll={
+              session?.role === 'player' && Boolean(session.claimedTokenId)
+            }
+          />
         ) : null}
 
         {joinPayload && state && !session && (
           <p className="text-sm text-[var(--vtt-text-muted)]" role="status" aria-live="polite">
-            Sincronizando sesión…
+            Preparando tu lugar en la mesa…
           </p>
         )}
 
         {joinPayload && !state && !error && (
           <p className="text-sm text-[var(--vtt-text-muted)]" role="status" aria-live="polite">
-            Esperando estado del servidor…
+            Cargando la mesa…
           </p>
         )}
 
-        {state && showMap ? (
+        {import.meta.env.DEV && state && showMap ? (
           <details className="vtt-surface vtt-glow-border w-full max-w-4xl shrink-0 overflow-hidden">
             <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-[var(--vtt-text)] hover:bg-[var(--vtt-surface-warm)]">
               Estado JSON (depuración)
@@ -585,6 +675,12 @@ export function PlayRoom() {
               {JSON.stringify(state, null, 2)}
             </pre>
           </details>
+        ) : null}
+
+        <ImageRevealModal reveal={imageReveal} onDismiss={dismissImageReveal} />
+
+        {socket && state && session ? (
+          <ScreenReactionOverlay bursts={screenReactionBursts} />
         ) : null}
       </main>
     </div>

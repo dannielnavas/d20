@@ -7,12 +7,7 @@ export type CharacterLobbyProps = {
   onClaim: (tokenId: string) => void
 }
 
-export function CharacterLobby({
-  roomId,
-  pcs,
-  claimingId,
-  onClaim,
-}: CharacterLobbyProps) {
+export function CharacterLobby({ roomId, pcs, claimingId, onClaim }: CharacterLobbyProps) {
   const busyGlobal = claimingId !== null
 
   return (
@@ -29,9 +24,8 @@ export function CharacterLobby({
           Elige tu personaje
         </h2>
         <p className="mt-3 text-pretty text-sm leading-relaxed text-[var(--vtt-text-muted)]">
-          Sala{' '}
-          <span className="font-mono text-[var(--vtt-gold)]">{roomId}</span>. Solo moverás el
-          token que elijas. Los personajes ya reclamados no están disponibles.
+          Sala <span className="font-mono text-[var(--vtt-gold)]">{roomId}</span>. Solo moverás la
+          ficha del personaje que elijas. Los que ya eligió otro jugador aparecen como ocupados.
         </p>
       </header>
 
@@ -62,11 +56,7 @@ export function CharacterLobby({
                   aria-hidden
                 >
                   {pc.img ? (
-                    <img
-                      src={pc.img}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
+                    <img src={pc.img} alt="" className="h-full w-full object-cover" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center font-vtt-display text-lg text-[var(--vtt-gold)]">
                       {pc.name.slice(0, 2).toUpperCase()}
@@ -77,10 +67,7 @@ export function CharacterLobby({
                   <p className="font-vtt-display text-lg font-medium text-[var(--vtt-text)]">
                     {pc.name}
                   </p>
-                  <p
-                    id={`${pc.id}-estado`}
-                    className="mt-1 text-xs text-[var(--vtt-text-muted)]"
-                  >
+                  <p id={`${pc.id}-estado`} className="mt-1 text-xs text-[var(--vtt-text-muted)]">
                     {statusLabel}
                   </p>
                 </div>
@@ -94,11 +81,8 @@ export function CharacterLobby({
       </ul>
 
       {pcs.length === 0 && (
-        <p
-          className="mt-8 text-center text-sm text-[var(--vtt-text-muted)]"
-          role="status"
-        >
-          No hay personajes en esta sala. Pide al DM que añada PJs o prueba la sala{' '}
+        <p className="mt-8 text-center text-sm text-[var(--vtt-text-muted)]" role="status">
+          No hay personajes en esta sala. Pide al director que añada héroes o prueba la sala{' '}
           <span className="font-mono text-[var(--vtt-gold)]">demo</span>.
         </p>
       )}

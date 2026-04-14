@@ -22,7 +22,7 @@ export function DmCastForm({ socket, getSpawnCenter, className = '' }: DmCastFor
   const pcCountId = `${panelId}-pc-count`
   const pcImgId = `${panelId}-pc-img`
 
-  const spawnNpc = useCallback(() => {
+  const spawnNpcOnMap = useCallback(() => {
     setLocalErr(null)
     const { x, y } = getSpawnCenter()
     socket.emit('spawnNpc', {
@@ -34,11 +34,21 @@ export function DmCastForm({ socket, getSpawnCenter, className = '' }: DmCastFor
     })
   }, [getSpawnCenter, npcImg, npcName, socket])
 
+  const spawnNpcReserve = useCallback(() => {
+    setLocalErr(null)
+    socket.emit('spawnNpc', {
+      reserveOnly: true,
+      name: npcName.trim() || 'PNJ',
+      img: npcImg.trim() || undefined,
+      size: 44,
+    })
+  }, [npcImg, npcName, socket])
+
   const spawnPc = useCallback(() => {
     setLocalErr(null)
     const n = Number.parseInt(pcCount, 10)
     if (!Number.isFinite(n) || n < 1 || n > 12) {
-      setLocalErr('Cantidad de personajes: entre 1 y 12')
+      setLocalErr('Puedes añadir entre 1 y 12 héroes a la vez. Ajusta el número e inténtalo de nuevo.')
       return
     }
     const { x, y } = getSpawnCenter()
@@ -68,7 +78,8 @@ export function DmCastForm({ socket, getSpawnCenter, className = '' }: DmCastFor
           Personajes y PNJ
         </h2>
         <p className="mt-2 text-xs leading-relaxed text-[var(--vtt-text-muted)]">
-          Los tokens nuevos aparecen en el centro del mapa. Colócalos en la vista «Mesa».
+          Los PNJ puedes guardarlos en reserva (no se ven en el mapa) y sacarlos al combate cuando
+          quieras desde el panel derecho. Los PJs nuevos van al centro del mapa.
         </p>
       </header>
 
@@ -86,7 +97,8 @@ export function DmCastForm({ socket, getSpawnCenter, className = '' }: DmCastFor
           Añadir PNJ
         </legend>
         <p className="mt-3 text-xs text-[var(--vtt-text-muted)]">
-          Monstruos, aliados o figuras que solo mueve el DM.
+          Monstruos, aliados o figuras que solo mueve el DM. La reserva evita llenar el mapa hasta
+          que actives cada PNJ.
         </p>
         <div className="mt-4 flex flex-col gap-3">
           <div>
@@ -116,8 +128,11 @@ export function DmCastForm({ socket, getSpawnCenter, className = '' }: DmCastFor
               autoComplete="off"
             />
           </div>
-          <button type="button" onClick={spawnNpc} className="vtt-btn-secondary w-full">
-            Crear PNJ en el centro
+          <button type="button" onClick={spawnNpcReserve} className="vtt-btn-primary w-full">
+            Guardar PNJ en reserva
+          </button>
+          <button type="button" onClick={spawnNpcOnMap} className="vtt-btn-secondary w-full">
+            Colocar PNJ en el centro del mapa
           </button>
         </div>
       </fieldset>

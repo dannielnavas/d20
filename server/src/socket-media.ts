@@ -42,7 +42,9 @@ export function registerMediaHandlers(io: Server, socket: Socket) {
     const data = socket.data as VttSocketData
     const roomId = data.roomId
     if (!roomId) {
-      socket.emit('mediaError', { message: 'Únete a la sala antes de activar audio/vídeo' })
+      socket.emit('mediaError', {
+        message: 'Entra primero a la mesa; después podrás encender cámara o micrófono.',
+      })
       return
     }
 

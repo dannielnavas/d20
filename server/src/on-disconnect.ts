@@ -8,9 +8,11 @@ export function clearTokenSocketsOnLeave(socket: Socket) {
   if (!roomId || data.isDm) return
 
   const room = getOrCreateRoom(roomId)
-  for (const t of room.tokens) {
-    if (t.ownerSocket === socket.id) {
-      t.ownerSocket = null
+  for (const sc of room.scenes) {
+    for (const t of sc.tokens) {
+      if (t.ownerSocket === socket.id) {
+        t.ownerSocket = null
+      }
     }
   }
 }

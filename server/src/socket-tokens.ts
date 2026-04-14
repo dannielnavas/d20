@@ -1,8 +1,12 @@
 import type { Server, Socket } from 'socket.io'
+import { schedulePersist } from './persistence.js'
 import { snapToGrid } from './snap.js'
 import { getOrCreateRoom } from './rooms.js'
+import { findTokenInRoom, getActiveScene } from './scene-helpers.js'
 import type { VttSocketData } from './socket-data.js'
 import type { Token } from './types.js'
+import { allowSocketEvent } from './rate-limit.js'
+import { assertNotSpectator } from './socket-guards.js'
 
 function parseTokenMovePayload(payload: unknown): { tokenId: string; x: number; y: number } | null {
   if (typeof payload !== 'object' || payload === null) return null
@@ -15,6 +19,7 @@ function parseTokenMovePayload(payload: unknown): { tokenId: string; x: number; 
 
 function canMoveToken(socket: Socket, token: Token): boolean {
   const d = socket.data as VttSocketData
+  if (d.isSpectator) return false
   if (d.isDm) return true
   if (token.type === 'npc') return false
   if (token.type !== 'pc') return false
@@ -27,23 +32,37 @@ function canMoveToken(socket: Socket, token: Token): boolean {
 
 export function registerTokenHandlers(io: Server, socket: Socket) {
   socket.on('tokenMove', (payload: unknown) => {
+    if (!assertNotSpectator(socket)) return
     const roomId = (socket.data as VttSocketData).roomId
     if (!roomId) return
+
+    if (!allowSocketEvent(socket.id, 'tokenMove', 90)) return
 
     const parsed = parseTokenMovePayload(payload)
     if (!parsed) return
 
     const room = getOrCreateRoom(roomId)
-    const token = room.tokens.find((t) => t.id === parsed.tokenId)
+    const token = findTokenInRoom(room, parsed.tokenId)
     if (!token) {
-      socket.emit('tokenError', { tokenId: parsed.tokenId, message: 'Token no encontrado' })
+      socket.emit('tokenError', {
+        tokenId: parsed.tokenId,
+        message: 'Esa ficha ya no está en el mapa.',
+      })
+      return
+    }
+
+    if (token.type === 'npc' && token.onMap === false) {
+      socket.emit('tokenError', {
+        tokenId: parsed.tokenId,
+        message: 'Ese PNJ está en reserva: actívalo en el elenco antes de moverlo.',
+      })
       return
     }
 
     if (!canMoveToken(socket, token)) {
       socket.emit('tokenError', {
         tokenId: parsed.tokenId,
-        message: 'No puedes mover este token',
+        message: 'No puedes mover esa ficha: la controla otro jugador o es un personaje no jugador.',
       })
       return
     }
@@ -59,30 +78,45 @@ export function registerTokenHandlers(io: Server, socket: Socket) {
   })
 
   socket.on('tokenMoveEnd', (payload: unknown) => {
+    if (!assertNotSpectator(socket)) return
     const roomId = (socket.data as VttSocketData).roomId
     if (!roomId) return
+
+    if (!allowSocketEvent(socket.id, 'tokenMoveEnd', 25)) return
 
     const parsed = parseTokenMovePayload(payload)
     if (!parsed) return
 
     const room = getOrCreateRoom(roomId)
-    const token = room.tokens.find((t) => t.id === parsed.tokenId)
+    const token = findTokenInRoom(room, parsed.tokenId)
     if (!token) {
-      socket.emit('tokenError', { tokenId: parsed.tokenId, message: 'Token no encontrado' })
+      socket.emit('tokenError', {
+        tokenId: parsed.tokenId,
+        message: 'Esa ficha ya no está en el mapa.',
+      })
+      return
+    }
+
+    if (token.type === 'npc' && token.onMap === false) {
+      socket.emit('tokenError', {
+        tokenId: parsed.tokenId,
+        message: 'Ese PNJ está en reserva: actívalo en el elenco antes de moverlo.',
+      })
       return
     }
 
     if (!canMoveToken(socket, token)) {
       socket.emit('tokenError', {
         tokenId: parsed.tokenId,
-        message: 'No puedes mover este token',
+        message: 'No puedes mover esa ficha: la controla otro jugador o es un personaje no jugador.',
       })
       return
     }
 
     let { x, y } = parsed
-    if (room.settings.snapToGrid) {
-      const snapped = snapToGrid(x, y, room.settings.gridSize)
+    const ms = getActiveScene(room).settings
+    if (ms.snapToGrid) {
+      const snapped = snapToGrid(x, y, ms.gridSize)
       x = snapped.x
       y = snapped.y
     }
@@ -95,5 +129,6 @@ export function registerTokenHandlers(io: Server, socket: Socket) {
       x: token.x,
       y: token.y,
     })
+    schedulePersist()
   })
 }

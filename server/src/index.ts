@@ -2,22 +2,44 @@ import cors from 'cors'
 import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
+import { signDmJwt } from './auth-dm.js'
 import { registerAutomationApi } from './automation.js'
 import { createCorsOrigin } from './cors-config.js'
 import { applyJoinSession, parseJoinPayload } from './join-handlers.js'
+import { DM_SECRET } from './dm-secret.js'
+import { log } from './logger.js'
+import { loadSnapshot, persistNow } from './persistence.js'
 import {
   checkSessionPassword,
   hasSessionPassword,
   publicRoomState,
+  type PublicRoomViewer,
 } from './room-session-password.js'
 import { clearTokenSocketsOnLeave } from './on-disconnect.js'
 import { getOrCreateRoom } from './rooms.js'
+import { clearSocketLimits } from './rate-limit.js'
 import { clearMediaPeer, registerMediaHandlers } from './socket-media.js'
+import { registerChatHandlers } from './socket-chat.js'
 import { registerClaimHandler } from './socket-claim.js'
+import { registerImageRevealHandlers } from './socket-image-reveal.js'
 import { registerDiceHandlers } from './socket-dice.js'
 import { registerDmHandlers } from './socket-dm.js'
+import { registerMapPingHandlers } from './socket-map-ping.js'
+import { registerScreenReactionHandlers } from './socket-screen-reaction.js'
+import { registerTokenReactionHandlers } from './socket-token-reaction.js'
+import { registerPollHandlers } from './socket-poll.js'
+import { registerRaiseHandHandlers } from './socket-raise-hand.js'
+import { registerRollRequestHandlers } from './socket-roll-request.js'
+import { registerMapToolsHandlers } from './socket-map-tools.js'
+import { emitTimerSyncToSocket } from './room-timer.js'
+import { registerTimerHandlers } from './socket-timer.js'
+import {
+  emitPrivateNotesInitial,
+  registerPrivateNotesHandlers,
+} from './socket-private-notes.js'
 import { registerTokenHandlers } from './socket-tokens.js'
 import type { VttSocketData } from './socket-data.js'
+import { maybeAttachRedisAdapter } from './redis-adapter.js'
 
 const PORT = Number(process.env.PORT) || 3000
 const corsOrigin = createCorsOrigin()
@@ -59,7 +81,19 @@ app.get('/', (_req, res) => {
 })
 
 app.get('/health', (_req, res) => {
-  res.json({ ok: true })
+  res.json({ ok: true, service: 'd20-vtt' })
+})
+
+/** Intercambia la clave DM por un JWT de corta duración (preferible a enviar dmKey en cada join). */
+app.post('/auth/dm', async (req, res) => {
+  const body = req.body as { dmKey?: string }
+  const key = typeof body?.dmKey === 'string' ? body.dmKey : ''
+  if (key !== DM_SECRET) {
+    res.status(401).json({ ok: false, error: 'Clave de DM incorrecta' })
+    return
+  }
+  const { token, expiresInSec } = await signDmJwt()
+  res.json({ ok: true, token, expiresIn: expiresInSec })
 })
 
 const httpServer = createServer(app)
@@ -76,12 +110,15 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     clearMediaPeer(socket)
     clearTokenSocketsOnLeave(socket)
+    clearSocketLimits(socket.id)
   })
 
   socket.on('joinRoom', async (payload: unknown) => {
     const parsed = parseJoinPayload(payload)
     if (!parsed) {
-      socket.emit('roomError', { message: 'roomId requerido' })
+      socket.emit('roomError', {
+        message: 'No encontramos la mesa en este enlace. Vuelve al inicio y abre la sala otra vez.',
+      })
       return
     }
 
@@ -103,12 +140,9 @@ io.on('connection', (socket) => {
         socket.emit('roomError', {
           message:
             pwd.length === 0
-              ? 'Esta mesa está protegida: introduce la contraseña de sesión.'
-              : 'Contraseña de sesión incorrecta.',
-          code:
-            pwd.length === 0
-              ? 'SESSION_PASSWORD_REQUIRED'
-              : 'SESSION_PASSWORD_INVALID',
+              ? 'Esta mesa tiene contraseña. Escríbela para entrar.'
+              : 'Esa contraseña no coincide. Pide al director de juego la correcta.',
+          code: pwd.length === 0 ? 'SESSION_PASSWORD_REQUIRED' : 'SESSION_PASSWORD_INVALID',
         })
         await socket.leave(roomId)
         delete data.roomId
@@ -116,22 +150,60 @@ io.on('connection', (socket) => {
       }
     }
 
-    if (!applyJoinSession(socket, state, parsed)) {
+    if (!(await applyJoinSession(socket, state, parsed))) {
       await socket.leave(roomId)
       delete data.roomId
       return
     }
 
-    socket.emit('roomState', publicRoomState(state))
+    const joinData = socket.data as VttSocketData
+    let roomViewer: PublicRoomViewer
+    if (joinData.isDm) roomViewer = { role: 'dm' }
+    else if (joinData.isSpectator) roomViewer = { role: 'spectator' }
+    else roomViewer = { role: 'player', playerSessionId: joinData.playerSessionId }
+
+    socket.emit('roomState', publicRoomState(state, roomViewer))
+    emitTimerSyncToSocket(socket, roomId)
+    emitPrivateNotesInitial(socket, state)
   })
 
   registerTokenHandlers(io, socket)
   registerClaimHandler(io, socket)
   registerDmHandlers(io, socket)
   registerDiceHandlers(io, socket)
+  registerImageRevealHandlers(io, socket)
   registerMediaHandlers(io, socket)
+  registerChatHandlers(io, socket)
+  registerPrivateNotesHandlers(io, socket)
+  registerMapPingHandlers(io, socket)
+  registerScreenReactionHandlers(io, socket)
+  registerTokenReactionHandlers(io, socket)
+  registerPollHandlers(io, socket)
+  registerRollRequestHandlers(io, socket)
+  registerRaiseHandHandlers(io, socket)
+  registerMapToolsHandlers(io, socket)
+  registerTimerHandlers(io, socket)
 })
 
-httpServer.listen(PORT, () => {
-  console.log(`VTT server http://localhost:${PORT}`)
-})
+async function main() {
+  await loadSnapshot()
+  await maybeAttachRedisAdapter(io)
+
+  httpServer.listen(PORT, () => {
+    log.info('VTT server listening', { port: PORT })
+  })
+
+  const shutdown = async (signal: string) => {
+    log.info('shutdown', { signal })
+    try {
+      await persistNow()
+    } catch (e) {
+      log.error('persist on shutdown failed', { err: String(e) })
+    }
+    process.exit(0)
+  }
+  process.on('SIGINT', () => void shutdown('SIGINT'))
+  process.on('SIGTERM', () => void shutdown('SIGTERM'))
+}
+
+void main()

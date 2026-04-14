@@ -38,11 +38,10 @@ function Home() {
               d20
             </h1>
             <p className="mx-auto mt-5 max-w-md text-pretty text-[var(--vtt-text-muted)] md:mx-0">
-              Ligero y en tiempo real. Como jugador reclamas un personaje en el
-              lobby; como DM controlas mapa, cuadrícula y PNJs. La clave del DM
-              vive en el servidor (<span className="font-mono text-[var(--vtt-text)]">DM_SECRET</span>
-              ). Opcionalmente puedes proteger la mesa con una contraseña de sesión compartida con el
-              grupo (panel del DM).
+              Ligero y en tiempo real. Como jugador eliges personaje en el vestíbulo; como director
+              de juego preparas mapa, cuadrícula y personajes no jugadores. La clave del director se
+              valida de forma segura en el servidor. Si quieres, puedes proteger la mesa con una
+              contraseña que compartas solo con tu grupo (desde el panel del director).
             </p>
           </header>
 
@@ -54,13 +53,14 @@ function Home() {
               Entrar como jugador
             </Link>
             <Link to={dmDemoHref} className="vtt-btn-secondary">
-              Entrar como DM
+              Entrar como director
             </Link>
           </nav>
 
           <p className="mt-10 text-center text-xs text-[var(--vtt-text-muted)] md:text-left">
-            Consejo: abre dos ventanas en <span className="font-mono text-[var(--vtt-gold-dim)]">/play/demo</span> para
-            probar varios jugadores.
+            Consejo: abre dos ventanas en{' '}
+            <span className="font-mono text-[var(--vtt-gold-dim)]">/play/demo</span> para probar
+            varios jugadores.
           </p>
         </div>
       </main>

@@ -1,8 +1,11 @@
 import { randomInt, randomUUID } from 'crypto'
 import type { Server, Socket } from 'socket.io'
-import { publicRoomState } from './room-session-password.js'
+import { appendActivity } from './activity-log.js'
+import { broadcastRoomState, emitDiceRolled } from './room-broadcast.js'
 import { getOrCreateRoom } from './rooms.js'
+import { findTokenInRoom } from './scene-helpers.js'
 import type { VttSocketData } from './socket-data.js'
+import { assertNotSpectator } from './socket-guards.js'
 import type { DiceMode, DieType, RoomState } from './types.js'
 
 const DIE_TYPES: DieType[] = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100']
@@ -12,6 +15,7 @@ const DICE_LOG_LIMIT = 20
 type DiceRollPayload = {
   dieType: DieType
   mode: DiceMode
+  secret: boolean
 }
 
 function parseDicePayload(payload: unknown): DiceRollPayload | null {
@@ -30,7 +34,9 @@ function parseDicePayload(payload: unknown): DiceRollPayload | null {
 
   if (dieType !== 'd20' && modeRaw !== 'normal') return null
 
-  return { dieType, mode: modeRaw }
+  const secret = o.secret === true
+
+  return { dieType, mode: modeRaw, secret }
 }
 
 function rollValue(sides: number): number {
@@ -53,7 +59,7 @@ function rollDice(dieType: DieType, mode: DiceMode): { rolls: number[]; total: n
 function getRollerName(room: RoomState, data: VttSocketData): string {
   if (data.isDm) return 'Dungeon Master'
   if (data.claimedTokenId) {
-    const token = room.tokens.find((t) => t.id === data.claimedTokenId)
+    const token = findTokenInRoom(room, data.claimedTokenId)
     if (token?.name) return token.name
   }
   return 'Jugador'
@@ -61,13 +67,16 @@ function getRollerName(room: RoomState, data: VttSocketData): string {
 
 export function registerDiceHandlers(io: Server, socket: Socket) {
   socket.on('diceRoll', (payload: unknown) => {
+    if (!assertNotSpectator(socket)) return
     const data = socket.data as VttSocketData
     const roomId = data.roomId
     if (!roomId) return
 
     const parsed = parseDicePayload(payload)
     if (!parsed) {
-      socket.emit('roomError', { message: 'Tirada inválida' })
+      socket.emit('roomError', {
+        message: 'Esa combinación de dado y modo no es válida. Prueba con otra opción.',
+      })
       return
     }
 
@@ -75,7 +84,7 @@ export function registerDiceHandlers(io: Server, socket: Socket) {
     const result = rollDice(parsed.dieType, parsed.mode)
     const roller = getRollerName(room, data)
 
-    const entry = {
+    const entry: RoomState['diceLog'][number] = {
       id: `roll-${randomUUID().replace(/-/g, '').slice(0, 16)}`,
       roller,
       dieType: parsed.dieType,
@@ -85,13 +94,29 @@ export function registerDiceHandlers(io: Server, socket: Socket) {
       timestamp: Date.now(),
     }
 
+    if (parsed.secret) {
+      entry.secret = true
+      if (!data.isDm && data.playerSessionId) {
+        entry.playerSessionId = data.playerSessionId
+      }
+    }
+
     room.diceLog.unshift(entry)
     if (room.diceLog.length > DICE_LOG_LIMIT) {
       room.diceLog = room.diceLog.slice(0, DICE_LOG_LIMIT)
     }
 
-    io.to(roomId).emit('diceRolled', entry)
-    io.to(roomId).emit('roomState', publicRoomState(room))
+    if (!parsed.secret) {
+      appendActivity(
+        room,
+        'dice',
+        `${roller}: ${parsed.dieType} → ${result.total}${parsed.mode !== 'normal' ? ` (${parsed.mode})` : ''}`,
+      )
+    }
+
+    void emitDiceRolled(io, roomId, entry, socket.id).then(() => {
+      broadcastRoomState(io, room)
+    })
   })
 
   socket.on('diceLogReset', () => {
@@ -99,12 +124,14 @@ export function registerDiceHandlers(io: Server, socket: Socket) {
     const roomId = data.roomId
     if (!roomId) return
     if (!data.isDm) {
-      socket.emit('dmError', { message: 'Solo el DM puede limpiar el historial de dados' })
+      socket.emit('dmError', {
+        message: 'Solo el director de juego puede vaciar el historial de tiradas.',
+      })
       return
     }
 
     const room = getOrCreateRoom(roomId)
     room.diceLog = []
-    io.to(roomId).emit('roomState', publicRoomState(room))
+    broadcastRoomState(io, room)
   })
 }

@@ -7,14 +7,14 @@ const VERCEL_HOST = /\.vercel\.app$/i
  */
 export function createCorsOrigin(): CorsOptions['origin'] {
   const raw = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173'
-  const explicit = raw.split(',').map((s) => s.trim()).filter(Boolean)
+  const explicit = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
   const allowVercel =
     process.env.CORS_ALLOW_VERCEL === '1' || process.env.CORS_ALLOW_VERCEL === 'true'
 
-  return (
-    origin: string | undefined,
-    callback: (err: Error | null, allow?: boolean) => void,
-  ) => {
+  return (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     if (!origin) {
       callback(null, true)
       return

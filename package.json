@@ -3,9 +3,20 @@
   "private": true,
   "scripts": {
     "dev": "concurrently -n server,client -c blue,magenta \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
-    "build": "npm run build --prefix client"
+    "build": "npm run build --prefix client && npm run build --prefix server",
+    "test": "npm run test --prefix server && npm run test --prefix client",
+    "lint": "npm run lint --prefix client",
+    "typecheck": "npm run typecheck --prefix client && npm run typecheck --prefix server",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.2"
   }
 }

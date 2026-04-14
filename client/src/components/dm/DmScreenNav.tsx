@@ -8,14 +8,14 @@ type DmScreenNavProps = {
 const screens: { id: DmScreenId; label: string; hint: string }[] = [
   { id: 'mesa', label: 'Mesa', hint: 'Tablero en vivo' },
   { id: 'mapa', label: 'Mapa', hint: 'Fondo y cuadrícula' },
-  { id: 'elenco', label: 'Elenco', hint: 'PJs y PNJ' },
+  { id: 'elenco', label: 'Elenco', hint: 'Héroes y PNJ' },
 ]
 
 export function DmScreenNav({ value, onChange }: DmScreenNavProps) {
   return (
     <nav
       className="dm-screen-nav relative w-full overflow-hidden rounded-[var(--vtt-radius)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface)] p-1 shadow-[var(--dm-panel-shadow)]"
-      aria-label="Secciones del Dungeon Master"
+      aria-label="Secciones del director de juego"
     >
       <div
         className="pointer-events-none absolute inset-y-2 left-2 w-px bg-gradient-to-b from-transparent via-[var(--vtt-gold-dim)] to-transparent opacity-40"
@@ -54,7 +54,9 @@ export function DmScreenNav({ value, onChange }: DmScreenNavProps) {
                 <span className="font-vtt-display text-[0.72rem] font-semibold uppercase tracking-[0.2em]">
                   {s.label}
                 </span>
-                <span className="hidden text-[0.65rem] text-[var(--vtt-text-muted)] sm:block">{s.hint}</span>
+                <span className="hidden text-[0.65rem] text-[var(--vtt-text-muted)] sm:block">
+                  {s.hint}
+                </span>
               </button>
             </li>
           )

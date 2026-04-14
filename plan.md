@@ -1,16 +1,19 @@
 # Contexto del Proyecto: VTT (Virtual Tabletop) Minimalista en Tiempo Real
 
 ## Objetivo
+
 Crear una aplicación web ligera y rápida para partidas de rol. La premisa principal es la **simplicidad extrema para el jugador**: la interfaz debe ser tan intuitiva que un grupo de **N jugadores** (cualquier tamaño de mesa razonable para el VTT) pueda usarla de inmediato sin tutoriales, cuentas ni menús complejos. El diseño no asume un número fijo de participantes: habrá tantos asientos de jugador como tokens `pc` defina el DM en la sala.
 
 El Dungeon Master (DM) cargará un mapa (imagen o video mp4) y tokens. Los **N** jugadores entran mediante un enlace único, cada uno hace clic en un personaje disponible en el lobby y juega.
 
 ## Stack Tecnológico Requerido
-* **Backend:** Node.js, Express, Socket.io (comunicación en tiempo real a 30-60fps).
-* **Frontend:** React (Vite), Tailwind CSS. Para la manipulación del mapa y tokens se recomienda usar HTML5 Canvas (ej. Konva.js/react-konva) o librerías de DOM optimizadas (ej. `react-zoom-pan-pinch` combinado con `framer-motion` o `dnd-kit`).
-* **Estado:** En memoria del servidor (Node.js).
+
+- **Backend:** Node.js, Express, Socket.io (comunicación en tiempo real a 30-60fps).
+- **Frontend:** React (Vite), Tailwind CSS. Para la manipulación del mapa y tokens se recomienda usar HTML5 Canvas (ej. Konva.js/react-konva) o librerías de DOM optimizadas (ej. `react-zoom-pan-pinch` combinado con `framer-motion` o `dnd-kit`).
+- **Estado:** En memoria del servidor (Node.js).
 
 ## Requerimientos Técnicos Clave (Cruciales)
+
 1. **Zoom y Paneo Infinito:** El mapa debe poder arrastrarse y tener zoom fluido (rueda del ratón o táctil).
 2. **Sistema de Cuadrícula (Snap to Grid):** Opción (toggleable por el DM) para que al soltar un token, este se ajuste magnéticamente a una cuadrícula invisible, facilitando el conteo de casillas.
 3. **Manejo de Capas (Z-Index):** - Capa 0: Fondo (Imagen/Video del mapa).
@@ -19,14 +22,16 @@ El Dungeon Master (DM) cargará un mapa (imagen o video mp4) y tokens. Los **N**
 4. **Resiliencia de Conexión:** Cualquier jugador entre los **N** conectados que recargue la página o se desconecte brevemente, al reconectar debe recibir al instante el estado actual del tablero y seguir vinculado a su personaje.
 
 ## Flujo de Usuario y Permisos
-* **Vista Jugador (`/play/sala-123`):** Al entrar, ve un "Lobby" con **todos** los tokens tipo `pc` (Player Character) que el DM haya colocado y que sigan libres (no reclamados por otro socket). Con **N** jugadores en la mesa, hasta **N** tokens `pc` distintos pueden estar asignados a la vez; cada jugador elige uno libre y entra al mapa. **Regla de oro:** Solo puede mover SU token.
-* **Vista DM (`/play/sala-123?role=dm&key=secret`):** Entra directo como administrador. Tiene un panel lateral donde puede:
+
+- **Vista Jugador (`/play/sala-123`):** Al entrar, ve un "Lobby" con **todos** los tokens tipo `pc` (Player Character) que el DM haya colocado y que sigan libres (no reclamados por otro socket). Con **N** jugadores en la mesa, hasta **N** tokens `pc` distintos pueden estar asignados a la vez; cada jugador elige uno libre y entra al mapa. **Regla de oro:** Solo puede mover SU token.
+- **Vista DM (`/play/sala-123?role=dm&key=secret`):** Entra directo como administrador. Tiene un panel lateral donde puede:
   - Cambiar la URL/Archivo del mapa base.
   - Agregar nuevos tokens PNJ (monstruos/aliados) al tablero.
   - Mover **cualquier** token (sea jugador o PNJ).
   - Activar/Desactivar el Snap to Grid.
 
 ## Estructura de Datos Base (Mental Model para Node.js)
+
 ```json
 {
   "roomId": "campana-123",
@@ -63,3 +68,4 @@ Fase 5: Herramientas de Dungeon Master
 Construye el Drawer/Panel lateral exclusivo del DM. Añade los formularios para actualizar el fondo del mapa en tiempo real y el botón para "spawnear" nuevos tokens NPC en el centro de la pantalla.
 
 Comienza configurando la Fase 1. Indícame la estructura de carpetas sugerida y dame los comandos de terminal para inicializar el backend y el frontend.
+```

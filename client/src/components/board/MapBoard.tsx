@@ -17,13 +17,12 @@ import { DmMapPreview } from '../dm/DmMapPreview'
 import { DmMapSetupForm } from '../dm/DmMapSetupForm'
 import type { DmScreenId } from '../dm/DmScreenNav'
 import { DmScreenNav } from '../dm/DmScreenNav'
+import { DmSceneBar } from '../dm/DmSceneBar'
 import { DmTokenRoster } from '../dm/DmTokenRoster'
 import type { RoomState, Token } from '../../types/room'
-import {
-  loadYoutubeIframeApi,
-  parseYoutubeUrl,
-  youtubeEmbedSrc,
-} from '../../utils/youtube'
+import { loadYoutubeIframeApi, parseYoutubeUrl, youtubeEmbedSrc } from '../../utils/youtube'
+import { MapPingBridge } from './MapPingLayer'
+import { ScreenReactionPalette } from '../reactions/ScreenReactionPalette'
 import { TokensLayer } from './TokensLayer'
 
 type YoutubeMapPlayer = {
@@ -97,6 +96,14 @@ export type MapBoardProps = {
   setRoomState: Dispatch<SetStateAction<RoomState | null>>
   canDragToken: (token: Token) => boolean
   isDm: boolean
+  /** Solo lectura: sin ping ni arrastre. */
+  isSpectator?: boolean
+  /**
+   * Si el DM usa la columna de herramientas, no duplicar el recuadro de audio/volumen del vídeo en el mapa.
+   */
+  suppressDmMapVideoChrome?: boolean
+  /** Jugador en mapa: paleta de reacciones a pantalla completa. */
+  showReactionPalette?: boolean
 }
 
 export function MapBoard({
@@ -105,6 +112,9 @@ export function MapBoard({
   setRoomState,
   canDragToken,
   isDm,
+  isSpectator = false,
+  suppressDmMapVideoChrome = false,
+  showReactionPalette = false,
 }: MapBoardProps) {
   const { backgroundUrl, backgroundType, mapAudioEnabled } = roomState.settings
   const mapVolume = Math.min(100, Math.max(0, Math.round(roomState.settings.mapVolume ?? 70)))
@@ -113,6 +123,7 @@ export function MapBoard({
   const ytPlayerRef = useRef<YoutubeMapPlayer | null>(null)
   const rawYtFrameId = useId()
   const ytIframeId = `vtt-yt${rawYtFrameId.replace(/\W/g, '')}`
+  const mapBoardA11yId = useId()
 
   const directMapVideoRef = useRef<HTMLVideoElement | null>(null)
   const [dmScreen, setDmScreen] = useState<DmScreenId>('mesa')
@@ -149,15 +160,12 @@ export function MapBoard({
 
   const hasMedia = Boolean(backgroundUrl.trim())
   const youtubeParsed =
-    hasMedia && backgroundType === 'video'
-      ? parseYoutubeUrl(backgroundUrl)
-      : null
-  const boardDims =
-    !hasMedia
-      ? { w: DEFAULT_W, h: DEFAULT_H }
-      : backgroundType === 'video' && youtubeParsed
-        ? { w: 1920, h: 1080 }
-        : dims
+    hasMedia && backgroundType === 'video' ? parseYoutubeUrl(backgroundUrl) : null
+  const boardDims = !hasMedia
+    ? { w: DEFAULT_W, h: DEFAULT_H }
+    : backgroundType === 'video' && youtubeParsed
+      ? { w: 1920, h: 1080 }
+      : dims
 
   const ytEmbedSrc = useMemo(() => {
     if (!hasMedia || backgroundType !== 'video') return ''
@@ -302,6 +310,9 @@ export function MapBoard({
 
   const showInteractiveMap = !isDm || dmScreen === 'mesa'
 
+  const canEmitPing =
+    !isSpectator && (isDm || roomState.settings.playersCanPing !== false)
+
   const getSpawnCenter = useCallback(
     () => ({
       x: Math.round(boardDims.w / 2),
@@ -313,9 +324,13 @@ export function MapBoard({
   return (
     <section
       className="flex min-h-0 w-full flex-1 flex-col gap-4"
-      aria-label={isDm ? 'Tablero y herramientas de Dungeon Master' : 'Tablero de juego'}
+      aria-label={isDm ? 'Tablero del director de juego' : 'Tablero de juego'}
     >
       {isDm ? <DmScreenNav value={dmScreen} onChange={setDmScreen} /> : null}
+
+      {isDm ? (
+        <DmSceneBar socket={socket} roomState={roomState} className="w-full max-w-4xl shrink-0" />
+      ) : null}
 
       {isDm && dmScreen === 'mapa' ? (
         <div className="flex min-h-0 flex-1 flex-col gap-6 xl:flex-row xl:items-stretch">
@@ -325,7 +340,10 @@ export function MapBoard({
             sessionPasswordConfigured={Boolean(roomState.sessionPasswordConfigured)}
             className="w-full shrink-0 xl:max-w-md xl:min-w-[20rem]"
           />
-          <DmMapPreview settings={roomState.settings} className="min-h-[min(40svh,320px)] xl:min-h-0" />
+          <DmMapPreview
+            settings={roomState.settings}
+            className="min-h-[min(40svh,320px)] xl:min-h-0"
+          />
         </div>
       ) : null}
 
@@ -336,7 +354,13 @@ export function MapBoard({
             getSpawnCenter={getSpawnCenter}
             className="w-full shrink-0 lg:max-w-md lg:min-w-[20rem]"
           />
-          <DmTokenRoster tokens={roomState.tokens} className="min-h-[min(36svh,280px)] flex-1 lg:min-h-0" />
+          <DmTokenRoster
+            socket={socket}
+            gridSize={roomState.settings.gridSize}
+            tokens={roomState.tokens}
+            getSpawnCenter={getSpawnCenter}
+            className="min-h-[min(36svh,280px)] flex-1 lg:min-h-0"
+          />
         </div>
       ) : null}
 
@@ -344,16 +368,22 @@ export function MapBoard({
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <p className="mb-2 max-w-prose text-xs leading-relaxed text-[var(--vtt-text-muted)]">
             {isDm
-              ? 'Vista Mesa: rueda o pellizco para zoom; arrastra el fondo en zonas vacías. Configura mapa y fichas en las pestañas superiores.'
-              : 'Rueda o pellizco: zoom en el mapa. Arrastra tu token; el fondo se mueve desde zonas vacías.'}
+              ? 'Vista Mesa: rueda o pellizco para acercar o alejar; arrastra el fondo por las zonas vacías. Mayús+clic en el mapa para ping. Reacciones a pantalla: columna derecha.'
+              : 'Rueda o pellizco para zoom en el mapa. Arrastra tu ficha; Mayús+clic en el mapa para ping. Reacciones en la esquina inferior izquierda. El fondo se mueve desde las zonas vacías.'}
           </p>
           <div
             className="relative min-h-[min(70svh,720px)] w-full flex-1 overflow-hidden rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[#040302] shadow-[inset_0_0_80px_rgba(0,0,0,0.55)]"
             style={{ backgroundColor: 'var(--dm-map-chrome, #040302)' }}
             role="application"
             aria-roledescription="lienzo del tablero"
-            aria-label="Vista del mapa: zoom con la rueda o gestos, arrastre para desplazar"
+            aria-describedby={mapBoardA11yId}
+            aria-label="Mapa: zoom con la rueda o gestos; arrastre para desplazar el lienzo; Tab para enfocar fichas."
           >
+            <p id={mapBoardA11yId} className="sr-only">
+              Tab para enfocar fichas que puedas mover. Las flechas mueven la ficha enfocada. Mayús
+              aumenta el paso. Arrastra con el puntero para mover una ficha. Mayús y clic en el mapa
+              para señalar un punto (ping).
+            </p>
             <TransformWrapper
               onInit={handleTransformInit}
               initialScale={1}
@@ -366,14 +396,17 @@ export function MapBoard({
               doubleClick={{ mode: 'reset', step: 0.7, excluded: ['vtt-token'] }}
               panning={{ velocityDisabled: false, excluded: ['vtt-token'] }}
             >
-              <TransformComponent
-                wrapperClass="!h-full !w-full"
-                contentClass="!inline-block"
-              >
-                <div
-                  className="relative shrink-0 select-none"
+              <TransformComponent wrapperClass="!h-full !w-full" contentClass="!inline-block">
+                <MapPingBridge
+                  socket={socket}
+                  viewportRef={viewportRef}
+                  canEmitPing={canEmitPing}
                   style={{ width: boardDims.w, height: boardDims.h }}
                 >
+                  <div
+                    key={roomState.activeSceneId}
+                    className="vtt-scene-enter relative h-full w-full"
+                  >
                   {hasMedia && backgroundType === 'video' && youtubeParsed && ytEmbedSrc ? (
                     <iframe
                       key={backgroundUrl}
@@ -417,8 +450,8 @@ export function MapBoard({
                       </p>
                       <p className="max-w-sm px-4 text-xs leading-relaxed text-[var(--vtt-text-muted)]">
                         {isDm
-                          ? 'En «Mapa» puedes cargar imagen, vídeo o YouTube; aquí verás el tablero en vivo.'
-                          : 'El DM puede cargar el mapa y crear personajes para la mesa cuando esté listo.'}
+                          ? 'En la pestaña «Mapa» puedes poner imagen, vídeo o YouTube; aquí verás el tablero en vivo.'
+                          : 'Cuando el director cargue el mapa y coloque personajes, verás la mesa aquí.'}
                       </p>
                       <div
                         className="absolute inset-0 opacity-[0.14]"
@@ -440,11 +473,23 @@ export function MapBoard({
                     setRoomState={setRoomState}
                     viewportRef={viewportRef}
                     canDragToken={canDragToken}
+                    gridSize={roomState.settings.gridSize}
+                    snapToGrid={roomState.settings.snapToGrid}
+                    showTokenNames={roomState.settings.showTokenNames !== false}
+                    raisedHands={roomState.raisedHands ?? []}
+                    showRaiseHandForDm={isDm}
                   />
-                </div>
+                  </div>
+                </MapPingBridge>
               </TransformComponent>
             </TransformWrapper>
-            {showMapAudioButton || showVolumeControl ? (
+            {showReactionPalette ? (
+              <div className="pointer-events-auto absolute bottom-12 left-3 z-[1998] max-w-[calc(100%-1.5rem)] rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 px-2 py-1.5 shadow-lg backdrop-blur-sm">
+                <ScreenReactionPalette socket={socket} />
+              </div>
+            ) : null}
+
+            {(showMapAudioButton || showVolumeControl) && !(isDm && suppressDmMapVideoChrome) ? (
               <div className="pointer-events-auto absolute bottom-3 right-3 z-[2000] flex min-w-[15rem] flex-col gap-2 rounded-md border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] p-2 shadow-[0_4px_20px_rgba(0,0,0,0.45)]">
                 {showMapAudioButton ? (
                   <button

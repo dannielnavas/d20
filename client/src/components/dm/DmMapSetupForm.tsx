@@ -20,6 +20,14 @@ export function DmMapSetupForm({
   const [bgType, setBgType] = useState(settings.backgroundType)
   const [gridSize, setGridSize] = useState(String(settings.gridSize))
   const [snapToGrid, setSnapToGrid] = useState(settings.snapToGrid)
+  const [playersCanPing, setPlayersCanPing] = useState(settings.playersCanPing)
+  const [showTokenNames, setShowTokenNames] = useState(settings.showTokenNames !== false)
+  const [hideNpcNamesFromPlayers, setHideNpcNamesFromPlayers] = useState(
+    settings.hideNpcNamesFromPlayers === true,
+  )
+  const [playersCanRevealImage, setPlayersCanRevealImage] = useState(
+    settings.playersCanRevealImage === true,
+  )
   const [mesaPwd, setMesaPwd] = useState('')
   const [localErr, setLocalErr] = useState<string | null>(null)
 
@@ -27,6 +35,10 @@ export function DmMapSetupForm({
   const bgTypeId = `${panelId}-bg-type`
   const gridId = `${panelId}-grid`
   const snapId = `${panelId}-snap`
+  const pingId = `${panelId}-ping`
+  const tokenNamesId = `${panelId}-token-names`
+  const hideNpcNamesId = `${panelId}-hide-npc-names`
+  const revealImgId = `${panelId}-reveal-img`
   const mesaPwdId = `${panelId}-mesa-pwd`
 
   useEffect(() => {
@@ -34,6 +46,10 @@ export function DmMapSetupForm({
     setBgType(settings.backgroundType)
     setGridSize(String(settings.gridSize))
     setSnapToGrid(settings.snapToGrid)
+    setPlayersCanPing(settings.playersCanPing)
+    setShowTokenNames(settings.showTokenNames !== false)
+    setHideNpcNamesFromPlayers(settings.hideNpcNamesFromPlayers === true)
+    setPlayersCanRevealImage(settings.playersCanRevealImage === true)
   }, [settings])
 
   const emitSettings = useCallback(
@@ -54,7 +70,7 @@ export function DmMapSetupForm({
   const applyGridSize = useCallback(() => {
     const n = Number.parseInt(gridSize, 10)
     if (!Number.isFinite(n)) {
-      setLocalErr('Tamaño de cuadrícula inválido')
+      setLocalErr('Escribe un número para el tamaño de casilla (por ejemplo, 50).')
       return
     }
     emitSettings({ gridSize: n })
@@ -64,6 +80,38 @@ export function DmMapSetupForm({
     (next: boolean) => {
       setSnapToGrid(next)
       emitSettings({ snapToGrid: next })
+    },
+    [emitSettings],
+  )
+
+  const togglePlayersPing = useCallback(
+    (next: boolean) => {
+      setPlayersCanPing(next)
+      emitSettings({ playersCanPing: next })
+    },
+    [emitSettings],
+  )
+
+  const toggleShowTokenNames = useCallback(
+    (next: boolean) => {
+      setShowTokenNames(next)
+      emitSettings({ showTokenNames: next })
+    },
+    [emitSettings],
+  )
+
+  const toggleHideNpcNames = useCallback(
+    (next: boolean) => {
+      setHideNpcNamesFromPlayers(next)
+      emitSettings({ hideNpcNamesFromPlayers: next })
+    },
+    [emitSettings],
+  )
+
+  const togglePlayersRevealImage = useCallback(
+    (next: boolean) => {
+      setPlayersCanRevealImage(next)
+      emitSettings({ playersCanRevealImage: next })
     },
     [emitSettings],
   )
@@ -119,8 +167,8 @@ export function DmMapSetupForm({
           Contraseña de la mesa
         </legend>
         <p className="mt-3 text-xs text-[var(--vtt-text-muted)]">
-          Jugadores y DM deben usarla para entrar (además de la clave de DM). Deja el campo vacío y
-          pulsa «Quitar» para abrir la mesa sin contraseña.
+          Todos la escriben al entrar a la mesa (es aparte de la clave del director). Deja el campo
+          vacío y pulsa «Quitar protección» si quieres que cualquiera pueda entrar sin contraseña.
         </p>
         <p className="mt-2 text-xs font-medium text-[var(--vtt-text)]">
           Estado:{' '}
@@ -148,7 +196,11 @@ export function DmMapSetupForm({
             <button type="button" onClick={applySessionPassword} className="vtt-btn-primary flex-1">
               Establecer o cambiar
             </button>
-            <button type="button" onClick={clearSessionPassword} className="vtt-btn-secondary flex-1">
+            <button
+              type="button"
+              onClick={clearSessionPassword}
+              className="vtt-btn-secondary flex-1"
+            >
               Quitar protección
             </button>
           </div>
@@ -196,6 +248,62 @@ export function DmMapSetupForm({
 
       <fieldset className="min-w-0 border-0 p-0">
         <legend className="font-vtt-display w-full border-b border-[var(--vtt-border-subtle)] pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--vtt-text-muted)]">
+          Mesa
+        </legend>
+        <div className="mt-4 flex flex-col gap-3">
+          <div className="flex items-start gap-3">
+            <input
+              id={pingId}
+              type="checkbox"
+              checked={playersCanPing}
+              onChange={(e) => togglePlayersPing(e.target.checked)}
+              className="mt-1 size-4 rounded border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] text-[var(--vtt-gold)] focus:ring-[var(--vtt-gold)]"
+            />
+            <label htmlFor={pingId} className="text-sm text-[var(--vtt-text)]">
+              Los jugadores pueden usar Shift+clic para ping en el mapa
+            </label>
+          </div>
+          <div className="flex items-start gap-3">
+            <input
+              id={tokenNamesId}
+              type="checkbox"
+              checked={showTokenNames}
+              onChange={(e) => toggleShowTokenNames(e.target.checked)}
+              className="mt-1 size-4 rounded border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] text-[var(--vtt-gold)] focus:ring-[var(--vtt-gold)]"
+            />
+            <label htmlFor={tokenNamesId} className="text-sm text-[var(--vtt-text)]">
+              Mostrar nombre bajo cada token en el mapa
+            </label>
+          </div>
+          <div className="flex items-start gap-3">
+            <input
+              id={hideNpcNamesId}
+              type="checkbox"
+              checked={hideNpcNamesFromPlayers}
+              onChange={(e) => toggleHideNpcNames(e.target.checked)}
+              className="mt-1 size-4 rounded border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] text-[var(--vtt-gold)] focus:ring-[var(--vtt-gold)]"
+            />
+            <label htmlFor={hideNpcNamesId} className="text-sm text-[var(--vtt-text)]">
+              Ocultar nombres reales de PNJ a jugadores y espectadores (solo tú ves el nombre en mesa)
+            </label>
+          </div>
+          <div className="flex items-start gap-3">
+            <input
+              id={revealImgId}
+              type="checkbox"
+              checked={playersCanRevealImage}
+              onChange={(e) => togglePlayersRevealImage(e.target.checked)}
+              className="mt-1 size-4 rounded border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] text-[var(--vtt-gold)] focus:ring-[var(--vtt-gold)]"
+            />
+            <label htmlFor={revealImgId} className="text-sm text-[var(--vtt-text)]">
+              Los jugadores pueden mostrar una imagen por URL a toda la mesa (10 s; tú siempre puedes)
+            </label>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset className="min-w-0 border-0 p-0">
+        <legend className="font-vtt-display w-full border-b border-[var(--vtt-border-subtle)] pb-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--vtt-text-muted)]">
           Cuadrícula
         </legend>
         <div className="mt-4 flex flex-col gap-4">
@@ -226,7 +334,11 @@ export function DmMapSetupForm({
                 className="vtt-input"
               />
             </div>
-            <button type="button" onClick={applyGridSize} className="vtt-btn-secondary shrink-0 px-4 py-2">
+            <button
+              type="button"
+              onClick={applyGridSize}
+              className="vtt-btn-secondary shrink-0 px-4 py-2"
+            >
               Aplicar
             </button>
           </div>

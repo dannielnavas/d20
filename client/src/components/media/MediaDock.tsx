@@ -10,6 +10,7 @@ import {
   IconMicOff,
   IconMicOn,
 } from './media-icons'
+import { PresenceStrip } from './PresenceStrip'
 
 export type MediaDockLayout = 'lobby' | 'map'
 
@@ -18,6 +19,10 @@ type MediaDockProps = {
   session: SessionState
   roomState: RoomState
   layout: MediaDockLayout
+  /** Jugador: id de sesión para mano levantada. */
+  playerSessionId?: string | null
+  /** Director: puede quitar manos desde presencia. */
+  isDm?: boolean
 }
 
 type RemoteTile = { stream: MediaStream; label: string; avatarUrl: string | null }
@@ -36,17 +41,18 @@ function iceServers(): RTCIceServer[] {
 
 function localDisplayName(session: SessionState, roomState: RoomState): string {
   if (session.role === 'dm') return 'DM'
+  if (session.role === 'spectator') return 'Espectador'
   const id = session.claimedTokenId
   if (!id) return 'Jugador'
-  const t = roomState.tokens.find((x) => x.id === id)
+  const t = roomState.scenes.flatMap((s) => s.tokens).find((x) => x.id === id)
   return t?.name ?? 'Jugador'
 }
 
 function localAvatarUrl(session: SessionState, roomState: RoomState): string | null {
-  if (session.role === 'dm') return null
+  if (session.role === 'dm' || session.role === 'spectator') return null
   const id = session.claimedTokenId
   if (!id) return null
-  const t = roomState.tokens.find((x) => x.id === id)
+  const t = roomState.scenes.flatMap((s) => s.tokens).find((x) => x.id === id)
   return t?.img ?? null
 }
 
@@ -97,6 +103,7 @@ function VideoThumb({
   muted,
   compact,
   featured,
+  handRaised,
 }: {
   stream: MediaStream
   name: string
@@ -104,6 +111,7 @@ function VideoThumb({
   muted?: boolean
   compact: boolean
   featured?: boolean
+  handRaised?: boolean
 }) {
   const ref = useRef<HTMLVideoElement>(null)
   useEffect(() => {
@@ -129,11 +137,7 @@ function VideoThumb({
       <div className="flex h-full w-full items-stretch">
         <div className="flex w-9 shrink-0 items-center justify-center border-r border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]">
           {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt=""
-              className="h-full w-full object-cover"
-            />
+            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             <span className="font-vtt-display text-[0.58rem] uppercase tracking-[0.12em] text-[var(--vtt-gold-dim)]">
               {name.slice(0, 2)}
@@ -149,6 +153,15 @@ function VideoThumb({
           aria-label={name}
         />
       </div>
+      {handRaised ? (
+        <span
+          className="pointer-events-none absolute right-1 top-1 z-[3] text-[1.05rem] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+          title="Mano levantada"
+          aria-hidden
+        >
+          ✋
+        </span>
+      ) : null}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-1 pb-1 pt-4">
         <p className="truncate text-center font-vtt-display text-[0.55rem] font-semibold uppercase tracking-[0.22em] text-[var(--vtt-gold)]">
           {name}
@@ -158,15 +171,16 @@ function VideoThumb({
   )
 }
 
-export function MediaDock({ socket, session, roomState, layout }: MediaDockProps) {
-  const label = useMemo(
-    () => localDisplayName(session, roomState),
-    [session, roomState],
-  )
-  const avatarUrl = useMemo(
-    () => localAvatarUrl(session, roomState),
-    [session, roomState],
-  )
+export function MediaDock({
+  socket,
+  session,
+  roomState,
+  layout,
+  playerSessionId = null,
+  isDm = false,
+}: MediaDockProps) {
+  const label = useMemo(() => localDisplayName(session, roomState), [session, roomState])
+  const avatarUrl = useMemo(() => localAvatarUrl(session, roomState), [session, roomState])
   const labelRef = useRef(label)
   labelRef.current = label
   const avatarRef = useRef<string | null>(avatarUrl)
@@ -288,7 +302,9 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
             payload: { type: 'offer', sdp: offer.sdp! },
           })
         } catch {
-          setMediaErr('No se pudo negociar la conexión con un participante')
+          setMediaErr(
+            'No pudimos enlazar voz o vídeo con alguien en la mesa. Sal de la llamada y vuelve a unirte.',
+          )
         }
       }
     }
@@ -307,15 +323,11 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
         if (!prev[msg.peerId]) return prev
         return {
           ...prev,
-          [
-            msg.peerId
-          ]: {
+          [msg.peerId]: {
             ...prev[msg.peerId],
             label: msg.displayName,
             avatarUrl:
-              typeof msg.avatarUrl === 'string' && msg.avatarUrl.length > 0
-                ? msg.avatarUrl
-                : null,
+              typeof msg.avatarUrl === 'string' && msg.avatarUrl.length > 0 ? msg.avatarUrl : null,
           },
         }
       })
@@ -375,7 +387,7 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
             payload: { type: 'answer', sdp: answer.sdp! },
           })
         } catch {
-          setMediaErr('Error al aceptar la conexión entrante')
+          setMediaErr('No pudimos aceptar la llamada entrante. Revisa la red e inténtalo otra vez.')
         }
         return
       }
@@ -387,17 +399,17 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
           await pc.setRemoteDescription({ type: 'answer', sdp: raw.sdp })
           flushIce(fromId, pc)
         } catch {
-          setMediaErr('Error al completar la conexión')
+          setMediaErr('La conexión no llegó a completarse. Espera unos segundos y prueba de nuevo.')
         }
       }
     }
 
     const onMediaErr = (msg: { message?: string }) => {
-      setMediaErr(msg?.message ?? 'Error de vídeo')
+      setMediaErr(msg?.message ?? 'Algo falló con la llamada de mesa. Comprueba permisos y conexión.')
     }
 
     const onDisconnect = () => {
-      setMediaErr('Conexión perdida: la llamada se ha cerrado')
+      setMediaErr('Se cortó la conexión; la llamada se cerró.')
       localStreamRef.current?.getTracks().forEach((t) => t.stop())
       setLocalStream(null)
       setInCall(false)
@@ -431,7 +443,9 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
   const joinCall = useCallback(async () => {
     setMediaErr(null)
     if (!navigator.mediaDevices?.getUserMedia) {
-      setMediaErr('Tu navegador no permite captura de audio/vídeo')
+      setMediaErr(
+        'Este navegador no puede usar micrófono ni cámara aquí. Prueba con otro navegador o actualízalo.',
+      )
       return
     }
     try {
@@ -447,7 +461,9 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
       setCamOn(true)
       setInCall(true)
     } catch {
-      setMediaErr('Permiso denegado o dispositivo no disponible')
+      setMediaErr(
+        'No pudimos usar el micrófono o la cámara. Revisa los permisos junto a la barra de direcciones y que el dispositivo esté conectado.',
+      )
     }
   }, [])
 
@@ -475,6 +491,12 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
   const remoteEntries = Object.entries(remotes)
   const compact = layout === 'map'
 
+  const localHandRaised = useMemo(
+    () =>
+      Boolean(playerSessionId && (roomState.raisedHands ?? []).includes(playerSessionId)),
+    [playerSessionId, roomState.raisedHands],
+  )
+
   const mapParticipants = useMemo(() => {
     if (!inCall || !localStream) return null
     const local = {
@@ -485,21 +507,23 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
       muted: true,
       avatarUrl,
     }
-    const rem = remoteEntries.map(([id, { label: remoteLabel, stream, avatarUrl: remoteAvatar }]) => ({
-      id,
-      label: remoteLabel,
-      isDm: remoteLabel.trim().toLowerCase() === 'dm',
-      stream,
-      muted: false,
-      avatarUrl: remoteAvatar,
-    }))
+    const rem = remoteEntries.map(
+      ([id, { label: remoteLabel, stream, avatarUrl: remoteAvatar }]) => ({
+        id,
+        label: remoteLabel,
+        isDm: remoteLabel.trim().toLowerCase() === 'dm',
+        stream,
+        muted: false,
+        avatarUrl: remoteAvatar,
+      }),
+    )
     const all = [local, ...rem]
     const dm = all.find((p) => p.isDm) ?? null
     const players = all.filter((p) => !p.isDm)
     return {
       top: dm ?? players[0] ?? null,
-      left: dm ? players[0] ?? null : players[1] ?? null,
-      right: dm ? players[1] ?? null : players[2] ?? null,
+      left: dm ? (players[0] ?? null) : (players[1] ?? null),
+      right: dm ? (players[1] ?? null) : (players[2] ?? null),
       hiddenPlayers: Math.max(0, players.length - (dm ? 2 : 3)),
     }
   }, [inCall, label, localStream, remoteEntries, session.role])
@@ -571,6 +595,7 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
           avatarUrl={avatarUrl}
           muted
           compact={compact}
+          handRaised={localHandRaised}
         />
         {remoteEntries.map(([peerId, { stream, label: remoteLabel, avatarUrl: remoteAvatar }]) => (
           <VideoThumb
@@ -584,15 +609,14 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
       </div>
     ) : null
 
-  const errBlock =
-    mediaErr ? (
-      <p
-        role="alert"
-        className={`text-xs text-[var(--vtt-danger-text)] ${compact ? 'border-b border-[var(--vtt-danger-border)] bg-[var(--vtt-danger-bg)] px-3 py-2 text-center' : 'mt-3 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-ember)] bg-[var(--vtt-danger-bg)] px-3 py-2'}`}
-      >
-        {mediaErr}
-      </p>
-    ) : null
+  const errBlock = mediaErr ? (
+    <p
+      role="alert"
+      className={`text-xs text-[var(--vtt-danger-text)] ${compact ? 'border-b border-[var(--vtt-danger-border)] bg-[var(--vtt-danger-bg)] px-3 py-2 text-center' : 'mt-3 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-ember)] bg-[var(--vtt-danger-bg)] px-3 py-2'}`}
+    >
+      {mediaErr}
+    </p>
+  ) : null
 
   if (layout === 'map') {
     return (
@@ -615,6 +639,9 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
               muted={mapParticipants.top.muted}
               compact
               featured
+              handRaised={
+                mapParticipants.top.stream === localStream ? localHandRaised : false
+              }
             />
           </div>
         ) : null}
@@ -627,6 +654,9 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
               avatarUrl={mapParticipants.left.avatarUrl}
               muted={mapParticipants.left.muted}
               compact
+              handRaised={
+                mapParticipants.left.stream === localStream ? localHandRaised : false
+              }
             />
           </div>
         ) : null}
@@ -639,6 +669,9 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
               avatarUrl={mapParticipants.right.avatarUrl}
               muted={mapParticipants.right.muted}
               compact
+              handRaised={
+                mapParticipants.right.stream === localStream ? localHandRaised : false
+              }
             />
           </div>
         ) : null}
@@ -653,6 +686,14 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
           className="vtt-media-dock-map-shell pointer-events-auto absolute bottom-0 left-1/2 z-[87] w-[min(20rem,calc(100vw-1rem))] -translate-x-1/2 rounded-t-[var(--vtt-radius)] px-2 py-2"
           style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 0px))' }}
         >
+          <PresenceStrip
+            socket={socket}
+            roomState={roomState}
+            session={session}
+            isDm={isDm}
+            playerSessionId={playerSessionId}
+            compact
+          />
           {toolbar}
         </div>
       </div>
@@ -675,6 +716,14 @@ export function MediaDock({ socket, session, roomState, layout }: MediaDockProps
         </div>
         <div className="shrink-0 pt-2 sm:pt-0">{toolbar}</div>
       </div>
+
+      <PresenceStrip
+        socket={socket}
+        roomState={roomState}
+        session={session}
+        isDm={isDm}
+        playerSessionId={playerSessionId}
+      />
 
       {errBlock}
 
