@@ -23,8 +23,9 @@ type InitiativePanelProps = {
   /**
    * `floating`: barra inferior (jugadores / espectadores).
    * `dmHud`: columna derecha del director (minimizable con persistencia).
+   * `inline`: panel embebido en otro contenedor (sin posición fija).
    */
-  placement?: 'floating' | 'dmHud'
+  placement?: 'floating' | 'dmHud' | 'inline'
   roomId?: string
 }
 
@@ -51,6 +52,7 @@ export function InitiativePanel({
     .filter((token): token is Token => Boolean(token))
 
   const isHud = placement === 'dmHud' && isDm && Boolean(roomId)
+  const isInline = placement === 'inline'
 
   if (!initiative.visible && !isDm) return null
 
@@ -216,6 +218,10 @@ export function InitiativePanel({
         {panelInner}
       </DmCollapsibleCard>
     )
+  }
+
+  if (isInline) {
+    return <section>{panelInner}</section>
   }
 
   return (

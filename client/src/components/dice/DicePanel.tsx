@@ -14,6 +14,8 @@ type DicePanelProps = {
   canRequestRoll?: boolean
   /** `dock`: columna del DM sin posición fija. */
   layout?: 'floating' | 'dock'
+  /** Solo `floating`: anclaje lateral del panel. */
+  floatingSide?: 'left' | 'right'
   /** Envuelto en `DmCollapsibleCard`: sin cabecera propia, contenido siempre visible. */
   nestedInHud?: boolean
 }
@@ -31,6 +33,7 @@ export function DicePanel({
   playerSessionId = null,
   canRequestRoll = false,
   layout = 'floating',
+  floatingSide = 'right',
   nestedInHud = false,
 }: DicePanelProps) {
   const [dieType, setDieType] = useState<DieType>('d20')
@@ -63,7 +66,7 @@ export function DicePanel({
       ? nestedInHud
         ? 'relative z-auto w-full flex flex-col'
         : 'relative z-auto w-full flex flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg)]/95 shadow-lg backdrop-blur-sm'
-      : 'fixed right-3 top-24 z-30 w-[min(24rem,calc(100vw-1.5rem))] flex flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg)]/95 shadow-lg backdrop-blur-sm'
+      : `fixed ${floatingSide === 'left' ? 'left-3' : 'right-3'} top-24 z-30 w-[min(24rem,calc(100vw-1.5rem))] flex flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg)]/95 shadow-lg backdrop-blur-sm`
 
   const showInnerHeader = !(layout === 'dock' && nestedInHud)
   const innerExpanded = nestedInHud ? true : expanded
