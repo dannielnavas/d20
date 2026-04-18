@@ -114,21 +114,21 @@ function PlayerPrivateNotes({
       {bodyOpen ? (
         <div className="flex max-h-[min(22rem,50svh)] flex-col gap-2 overflow-y-auto p-3 text-sm">
           {dmText ? (
-            <div className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface-warm)]/50 p-2">
+            <div className="relative rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface-warm)]/50 p-3">
               <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-gold)]">
-                Del director
+                Mensaje del Director
               </p>
               <p className="whitespace-pre-wrap text-sm text-[var(--vtt-text)]">
                 {dmText}
               </p>
             </div>
           ) : null}
-          <div>
+          <div className="flex flex-col gap-1">
             <label
               htmlFor="vtt-private-to-dm"
-              className="mb-1 block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]"
+              className="mt-1 block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]"
             >
-              Para el director
+              {dmText ? 'Tu respuesta' : 'Mensaje para el director'}
             </label>
             <textarea
               id="vtt-private-to-dm"
@@ -258,12 +258,22 @@ function DmPrivateNotes({
                   ))}
                 </select>
               </div>
-              <div>
+              {entry.player ? (
+                <div className="relative rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface-warm)]/50 p-3">
+                  <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-gold)]">
+                    Mensaje del Jugador
+                  </p>
+                  <p className="whitespace-pre-wrap text-sm text-[var(--vtt-text)]">
+                    {entry.player}
+                  </p>
+                </div>
+              ) : null}
+              <div className="flex flex-col gap-1">
                 <label
                   htmlFor="vtt-dm-private-msg"
-                  className="mb-1 block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]"
+                  className="mt-1 block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]"
                 >
-                  Tu mensaje al jugador
+                  {entry.player ? 'Tu respuesta' : 'Tu mensaje al jugador'}
                 </label>
                 <textarea
                   id="vtt-dm-private-msg"
@@ -275,16 +285,6 @@ function DmPrivateNotes({
                   placeholder="Solo lo verá ese jugador…"
                 />
               </div>
-              {entry.player ? (
-                <div className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface-warm)]/50 p-2">
-                  <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-gold)]">
-                    Lo que escribió el jugador
-                  </p>
-                  <p className="whitespace-pre-wrap text-sm text-[var(--vtt-text)]">
-                    {entry.player}
-                  </p>
-                </div>
-              ) : null}
               <button type="button" className={`vtt-btn-primary w-full text-xs transition-colors ${feedback ? 'bg-[var(--vtt-forest)] text-white !border-[var(--vtt-forest)]' : ''}`} onClick={saveDm}>
                 {feedback ? '¡Nota enviada al jugador!' : 'Guardar mensaje al jugador'}
               </button>
