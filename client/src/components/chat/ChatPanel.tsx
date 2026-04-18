@@ -188,7 +188,7 @@ export function ChatPanel({
       ? 'relative z-auto flex w-full flex-col'
       : layout === 'dock'
         ? 'relative z-auto flex w-full flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 shadow-lg backdrop-blur-sm'
-        : 'fixed bottom-3 left-3 z-[85] flex w-[min(22rem,calc(100vw-1.5rem))] flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 shadow-lg backdrop-blur-sm'
+        : 'fixed bottom-3 right-3 z-[85] flex w-[min(22rem,calc(100vw-1.5rem))] flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 shadow-lg backdrop-blur-sm'
 
   const showInnerHeader = !(layout === 'dock' && nestedInHud)
   const showMessages = nestedDock ? true : expanded

@@ -489,7 +489,7 @@ export function PlayRoom() {
         ) : null}
 
         {showMap && state && socket && session?.role === 'player' ? (
-          <div className="pointer-events-auto fixed left-3 top-24 z-[88] flex w-[min(20rem,calc(100vw-1rem))] flex-col gap-3">
+          <div className="pointer-events-auto fixed right-3 top-24 z-[88] flex w-[min(20rem,calc(100vw-1rem))] flex-col gap-3 items-end">
             {canUseDicePanel ? (
               <DicePanel
                 socket={socket}

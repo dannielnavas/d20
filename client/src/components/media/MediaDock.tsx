@@ -527,7 +527,7 @@ export function MediaDock({
       return a.label.localeCompare(b.label)
     })
     return { all }
-  }, [inCall, label, localStream, remoteEntries, session.role])
+  }, [inCall, label, avatarUrl, localStream, remoteEntries, session.role])
 
   const toolbar = (
     <div
@@ -631,22 +631,47 @@ export function MediaDock({
           </p>
         ) : null}
 
-        {mapParticipants?.all ? (
-          <div className="pointer-events-auto absolute left-3 top-20 bottom-24 z-[86] flex flex-col gap-3 overflow-y-auto w-[min(100%,11rem)] xl:w-[12rem] hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            {mapParticipants.all.map((p) => (
-              <VideoThumb
-                key={p.id}
-                stream={p.stream}
-                name={p.label}
-                avatarUrl={p.avatarUrl}
-                muted={p.muted}
-                compact
-                featured={p.isDm}
-                handRaised={p.id === 'local' ? localHandRaised : false}
-              />
-            ))}
-          </div>
-        ) : null}
+        {mapParticipants?.all ? (() => {
+          const dmParticipants = mapParticipants.all.filter(p => p.isDm)
+          const playerParticipants = mapParticipants.all.filter(p => !p.isDm)
+
+          return (
+            <>
+              {dmParticipants.length > 0 && (
+                <div className="pointer-events-auto absolute top-3 left-1/2 -translate-x-1/2 z-[86] flex flex-row gap-3">
+                  {dmParticipants.map((p) => (
+                    <VideoThumb
+                      key={p.id}
+                      stream={p.stream}
+                      name={p.label}
+                      avatarUrl={p.avatarUrl}
+                      muted={p.muted}
+                      compact
+                      featured
+                      handRaised={p.id === 'local' ? localHandRaised : false}
+                    />
+                  ))}
+                </div>
+              )}
+              {playerParticipants.length > 0 && (
+                <div className="pointer-events-auto absolute left-3 top-20 bottom-24 z-[86] flex flex-col gap-3 overflow-y-auto w-[min(100%,11rem)] xl:w-[12rem] hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {playerParticipants.map((p) => (
+                    <VideoThumb
+                      key={p.id}
+                      stream={p.stream}
+                      name={p.label}
+                      avatarUrl={p.avatarUrl}
+                      muted={p.muted}
+                      compact
+                      featured={false}
+                      handRaised={p.id === 'local' ? localHandRaised : false}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )
+        })() : null}
 
         <div
           className="vtt-media-dock-map-shell pointer-events-auto absolute bottom-0 left-1/2 z-[87] w-[min(20rem,calc(100vw-1rem))] -translate-x-1/2 rounded-t-[var(--vtt-radius)] px-2 py-2"

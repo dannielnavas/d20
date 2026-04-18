@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type Dispatch,
   type MutableRefObject,
@@ -23,6 +24,7 @@ import {
   screenReactionSpotForIndex,
   type ScreenReactionBurst,
 } from '../../utils/screenReactionBurst'
+import { playChatSound, playWhisperSound, playHandRaisedSound } from '../../utils/audioFx'
 
 export type JoinPayload = {
   roomId: string
@@ -337,6 +339,84 @@ export function usePlayRoomSocket(
     if (lastRollIdRef.current === latest.id) return
     triggerRollFx(latest)
   }, [state?.diceLog, triggerRollFx, lastRollIdRef])
+
+  const lastChatIdRef = useRef<string | null>(null)
+  
+  useEffect(() => {
+    if (!state?.chatLog || state.chatLog.length === 0) return
+    const latest = state.chatLog[0]
+    
+    if (lastChatIdRef.current === null) {
+      lastChatIdRef.current = latest.id
+      return
+    }
+    
+    if (lastChatIdRef.current !== latest.id) {
+      lastChatIdRef.current = latest.id
+      
+      const isOurs = (latest.authorSessionId && joinPayload?.playerSessionId === latest.authorSessionId) || (latest.author === 'DM' && session?.role === 'dm')
+      if (!isOurs) {
+        if (latest.whisper) {
+          playWhisperSound()
+        } else {
+          playChatSound()
+        }
+      }
+    }
+  }, [state?.chatLog, session, joinPayload?.playerSessionId])
+
+  const lastHandsRef = useRef<string[]>([])
+  
+  useEffect(() => {
+    if (!state) return
+    const currentHands = state.raisedHands || []
+    
+    if (lastHandsRef.current.length > 0 || currentHands.length > 0) {
+      const newHands = currentHands.filter((h) => !lastHandsRef.current.includes(h))
+      if (newHands.length > 0) {
+         const someoneElse = newHands.some((h) => h !== joinPayload?.playerSessionId)
+         if (someoneElse) {
+            playHandRaisedSound()
+         }
+      }
+    }
+    
+    lastHandsRef.current = currentHands
+  }, [state, state?.raisedHands, joinPayload?.playerSessionId])
+
+  const lastNoteDmRef = useRef<string | null>(null)
+  
+  useEffect(() => {
+    if (session?.role === 'player' && privateNotesPlayerPair) {
+      if (lastNoteDmRef.current !== null && privateNotesPlayerPair.dm !== lastNoteDmRef.current) {
+        if (privateNotesPlayerPair.dm.length > (lastNoteDmRef.current.length) || privateNotesPlayerPair.dm !== lastNoteDmRef.current) {
+           playWhisperSound()
+        }
+      }
+      lastNoteDmRef.current = privateNotesPlayerPair.dm
+    }
+  }, [privateNotesPlayerPair, session?.role])
+
+  const lastNotePlayerBySessionRef = useRef<Record<string, string>>({})
+  
+  useEffect(() => {
+    if (session?.role === 'dm') {
+      let changed = false
+      for (const sid of Object.keys(privateNotesDmBySession)) {
+        const currentP = privateNotesDmBySession[sid]?.player
+        const lastP = lastNotePlayerBySessionRef.current[sid]
+        if (lastP !== undefined && currentP !== lastP) {
+          if (currentP && (!lastP || currentP.length !== lastP.length || currentP !== lastP)) {
+            changed = true
+          }
+        }
+        lastNotePlayerBySessionRef.current[sid] = currentP || ''
+      }
+      if (changed) {
+        playWhisperSound()
+      }
+    }
+  }, [privateNotesDmBySession, session?.role])
 
   return {
     state,
