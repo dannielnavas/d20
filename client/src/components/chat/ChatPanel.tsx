@@ -240,7 +240,7 @@ export function ChatPanel({
             </div>
           ) : null}
           <div
-            className="max-h-40 overflow-y-auto px-3 py-2 text-sm"
+            className="flex flex-col-reverse max-h-40 overflow-y-auto px-3 py-2 text-sm"
             role="log"
             aria-live="polite"
             aria-relevant="additions"
@@ -248,13 +248,13 @@ export function ChatPanel({
             {roomState.chatLog.length === 0 ? (
               <p className="text-xs text-[var(--vtt-text-muted)]">Sin mensajes aún.</p>
             ) : (
-              [...roomState.chatLog]
-                .slice()
-                .reverse()
-                .map((m) => (
+              [...roomState.chatLog].map((m) => (
                   <p key={m.id} className="mb-1.5 break-words leading-snug">
                     <span className="font-semibold text-[var(--vtt-gold-dim)]">{m.author}:</span>{' '}
-                    <span className="text-[var(--vtt-text)]">{m.text}</span>
+                    <span className={`text-[var(--vtt-text)] ${m.whisper ? 'italic text-[var(--vtt-gold-dim)] opacity-90' : ''}`}>
+                      {m.whisper ? <strong className="text-[var(--vtt-forest)] text-xs mr-1">[Susurro]</strong> : null}
+                      {m.text}
+                    </span>
                   </p>
                 ))
             )}

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RoomState } from '../../types/room'
 
-const ROLL_REVEAL_MS = 2500
-const ROLL_HIDE_MS = 3700
+const ROLL_REVEAL_MS = 3500
+const ROLL_HIDE_MS = 6000
 const SPECIAL_TEXT_HOLD_MS = 4000
 
 export function useRollFx() {

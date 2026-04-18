@@ -368,7 +368,7 @@ export function MapBoard({
           <p className="mb-2 max-w-prose text-xs leading-relaxed text-[var(--vtt-text-muted)]">
             {isDm
               ? 'Vista Mesa: rueda o pellizco para acercar o alejar; arrastra el fondo por las zonas vacías. Mayús+clic en el mapa para ping. Reacciones a pantalla: columna derecha.'
-              : 'Rueda o pellizco para zoom en el mapa. Arrastra tu ficha; Mayús+clic en el mapa para ping. Reacciones en la esquina inferior izquierda. El fondo se mueve desde las zonas vacías.'}
+              : 'Rueda o pellizco para zoom en el mapa. Arrastra tu ficha con el dedo o el ratón; Mayús+clic en el mapa para ping. Reacciones en el panel de herramientas a la izquierda. El fondo se mueve desde las zonas vacías.'}
           </p>
           <div
             className="relative min-h-[min(70svh,720px)] w-full flex-1 overflow-hidden rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[#040302] shadow-[inset_0_0_80px_rgba(0,0,0,0.55)]"
@@ -376,26 +376,29 @@ export function MapBoard({
             role="application"
             aria-roledescription="lienzo del tablero"
             aria-describedby={mapBoardA11yId}
-            aria-label="Mapa: zoom con la rueda o gestos; arrastre para desplazar el lienzo; Tab para enfocar fichas."
+            aria-label="Mapa: zoom con la rueda o con dos dedos; arrastre con un dedo o el ratón para desplazar el lienzo; Tab para enfocar fichas."
           >
             <p id={mapBoardA11yId} className="sr-only">
               Tab para enfocar fichas que puedas mover. Las flechas mueven la ficha enfocada. Mayús
-              aumenta el paso. Arrastra con el puntero para mover una ficha. Mayús y clic en el mapa
-              para señalar un punto (ping).
+              aumenta el paso. Arrastra con el dedo o el puntero para mover una ficha. Dos dedos en el
+              mapa vacío para acercar o alejar. Mayús y clic en el mapa para señalar un punto (ping).
             </p>
             <TransformWrapper
               onInit={handleTransformInit}
               initialScale={1}
-              minScale={0.08}
+              minScale={0.25}
               maxScale={14}
-              limitToBounds={false}
+              limitToBounds={true}
               centerOnInit
               wheel={{ step: 0.12, excluded: ['vtt-token'] }}
               pinch={{ step: 6, excluded: ['vtt-token'] }}
               doubleClick={{ mode: 'reset', step: 0.7, excluded: ['vtt-token'] }}
               panning={{ velocityDisabled: false, excluded: ['vtt-token'] }}
             >
-              <TransformComponent wrapperClass="!h-full !w-full" contentClass="!inline-block">
+              <TransformComponent
+                wrapperClass="!h-full !w-full touch-none"
+                contentClass="!inline-block"
+              >
                 <MapPingBridge
                   socket={socket}
                   viewportRef={viewportRef}

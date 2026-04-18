@@ -140,12 +140,14 @@ export function TokenSprite({
           data-token-id={token.id}
           aria-label={`${token.name}, ${kind}.${conditionsAria} Usa flechas para mover; Mayús aumenta el paso.`}
           title={`${token.name} — arrastra o usa flechas para mover`}
-          className={`${circleClass} pointer-events-auto cursor-grab active:cursor-grabbing`}
+          className={`vtt-token ${circleClass} pointer-events-auto cursor-grab active:cursor-grabbing`}
           style={circleStyle}
           onPointerDown={(e) => {
-            if (e.button !== 0) return
+            if (e.pointerType === 'mouse' && e.button !== 0) return
             onPointerDown(e, token)
           }}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
           onKeyDown={onKeyDown ? (e) => onKeyDown(e, token) : undefined}
         >
           {inner}
@@ -164,7 +166,7 @@ export function TokenSprite({
         role="img"
         aria-label={`${token.name}, ${kind}.${conditionsAria}`}
         title={`${token.name} — no puedes moverlo`}
-        className={`${circleClass} pointer-events-none opacity-75`}
+        className={`vtt-token ${circleClass} pointer-events-none opacity-75`}
         style={circleStyle}
       >
         {inner}

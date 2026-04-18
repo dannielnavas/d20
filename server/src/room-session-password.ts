@@ -23,6 +23,22 @@ function filterDiceLogForViewer(
   })
 }
 
+function filterChatLogForViewer(
+  chatLog: RoomState['chatLog'],
+  viewer: PublicRoomViewer,
+): RoomState['chatLog'] {
+  return chatLog.filter((m) => {
+    if (!m.whisper) return true
+    if (viewer.role === 'dm') return true
+    if (viewer.role === 'spectator') return false
+    const sid = viewer.playerSessionId
+    if (sid && (m.authorSessionId === sid || (m.mentions && m.mentions.includes(sid)))) {
+      return true
+    }
+    return false
+  })
+}
+
 export function hasSessionPassword(roomId: string): boolean {
   return hashes.has(roomId)
 }
@@ -106,6 +122,7 @@ export function publicRoomState(
     activePoll: (activePoll ?? null) as RoomState['activePoll'],
     pendingRollRequests,
     diceLog: filterDiceLogForViewer(room.diceLog, viewer),
+    chatLog: filterChatLogForViewer(room.chatLog, viewer),
     sessionPasswordConfigured: hasSessionPassword(room.roomId),
     scenes: room.scenes.map((sc) => ({
       ...sc,

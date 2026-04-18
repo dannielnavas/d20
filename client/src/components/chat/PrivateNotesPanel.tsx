@@ -65,6 +65,7 @@ function PlayerPrivateNotes({
 }) {
   const dmText = pair?.dm ?? ''
   const [draftPlayer, setDraftPlayer] = useState(pair?.player ?? '')
+  const [feedback, setFeedback] = useState(false)
 
   useEffect(() => {
     setDraftPlayer(pair?.player ?? '')
@@ -72,6 +73,8 @@ function PlayerPrivateNotes({
 
   const savePlayer = useCallback(() => {
     socket.emit('privateNotesSet', { player: draftPlayer })
+    setFeedback(true)
+    setTimeout(() => setFeedback(false), 2500)
   }, [draftPlayer, socket])
 
   return (
@@ -123,8 +126,8 @@ function PlayerPrivateNotes({
               placeholder="Escribe algo que solo verá el director…"
             />
           </div>
-          <button type="button" className="vtt-btn-primary w-full text-xs" onClick={savePlayer}>
-            Guardar tu nota
+          <button type="button" className={`vtt-btn-primary w-full text-xs transition-colors ${feedback ? 'bg-[var(--vtt-forest)] text-white !border-[var(--vtt-forest)]' : ''}`} onClick={savePlayer}>
+            {feedback ? '¡Nota guardada y enviada!' : 'Guardar tu nota'}
           </button>
         </div>
       ) : null}
@@ -180,6 +183,7 @@ function DmPrivateNotes({
     ? (bySession[selectedSid] ?? { dm: '', player: '' })
     : { dm: '', player: '' }
   const [draftDm, setDraftDm] = useState(entry.dm)
+  const [feedback, setFeedback] = useState(false)
 
   useEffect(() => {
     setDraftDm(entry.dm)
@@ -188,6 +192,8 @@ function DmPrivateNotes({
   const saveDm = useCallback(() => {
     if (!selectedSid) return
     socket.emit('privateNotesSet', { playerSessionId: selectedSid, dm: draftDm })
+    setFeedback(true)
+    setTimeout(() => setFeedback(false), 2500)
   }, [draftDm, selectedSid, socket])
 
   const shellClass =
@@ -271,8 +277,8 @@ function DmPrivateNotes({
                   aria-readonly="true"
                 />
               </div>
-              <button type="button" className="vtt-btn-primary w-full text-xs" onClick={saveDm}>
-                Guardar mensaje al jugador
+              <button type="button" className={`vtt-btn-primary w-full text-xs transition-colors ${feedback ? 'bg-[var(--vtt-forest)] text-white !border-[var(--vtt-forest)]' : ''}`} onClick={saveDm}>
+                {feedback ? '¡Nota enviada al jugador!' : 'Guardar mensaje al jugador'}
               </button>
             </>
           )}

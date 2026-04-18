@@ -498,6 +498,19 @@ export function registerDmHandlers(io: Server, socket: Socket) {
 
     const room = getOrCreateRoom(roomId)
     if (!room.scenes.some((s) => s.id === sceneId)) return
+
+    const oldScene = getActiveScene(room)
+    const newScene = room.scenes.find((s) => s.id === sceneId)!
+    
+    if (oldScene.id !== newScene.id) {
+      const pcs = oldScene.tokens.filter((t) => t.type === 'pc')
+      for (const pc of pcs) {
+        if (!newScene.tokens.some((nt) => nt.id === pc.id)) {
+          newScene.tokens.push({ ...pc })
+        }
+      }
+    }
+
     room.activeSceneId = sceneId
     syncInitiative(room)
     appendActivity(room, 'scene', `Escena activa: ${getActiveScene(room).name}`)

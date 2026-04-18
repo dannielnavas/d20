@@ -519,14 +519,14 @@ export function MediaDock({
       }),
     )
     const all = [local, ...rem]
-    const dm = all.find((p) => p.isDm) ?? null
-    const players = all.filter((p) => !p.isDm)
-    return {
-      top: dm ?? players[0] ?? null,
-      left: dm ? (players[0] ?? null) : (players[1] ?? null),
-      right: dm ? (players[1] ?? null) : (players[2] ?? null),
-      hiddenPlayers: Math.max(0, players.length - (dm ? 2 : 3)),
-    }
+    all.sort((a, b) => {
+      if (a.isDm && !b.isDm) return -1
+      if (!a.isDm && b.isDm) return 1
+      if (a.id === 'local') return -1
+      if (b.id === 'local') return 1
+      return a.label.localeCompare(b.label)
+    })
+    return { all }
   }, [inCall, label, localStream, remoteEntries, session.role])
 
   const toolbar = (
@@ -631,49 +631,20 @@ export function MediaDock({
           </p>
         ) : null}
 
-        {mapParticipants?.top ? (
-          <div className="absolute left-1/2 top-3 z-[86] -translate-x-1/2">
-            <VideoThumb
-              stream={mapParticipants.top.stream}
-              name={mapParticipants.top.label}
-              avatarUrl={mapParticipants.top.avatarUrl}
-              muted={mapParticipants.top.muted}
-              compact
-              featured
-              handRaised={mapParticipants.top.stream === localStream ? localHandRaised : false}
-            />
-          </div>
-        ) : null}
-
-        {mapParticipants?.left ? (
-          <div className="absolute left-3 top-1/2 z-[86] -translate-y-1/2">
-            <VideoThumb
-              stream={mapParticipants.left.stream}
-              name={mapParticipants.left.label}
-              avatarUrl={mapParticipants.left.avatarUrl}
-              muted={mapParticipants.left.muted}
-              compact
-              handRaised={mapParticipants.left.stream === localStream ? localHandRaised : false}
-            />
-          </div>
-        ) : null}
-
-        {mapParticipants?.right ? (
-          <div className="absolute right-3 top-1/2 z-[86] -translate-y-1/2">
-            <VideoThumb
-              stream={mapParticipants.right.stream}
-              name={mapParticipants.right.label}
-              avatarUrl={mapParticipants.right.avatarUrl}
-              muted={mapParticipants.right.muted}
-              compact
-              handRaised={mapParticipants.right.stream === localStream ? localHandRaised : false}
-            />
-          </div>
-        ) : null}
-
-        {mapParticipants && mapParticipants.hiddenPlayers > 0 ? (
-          <div className="absolute right-4 top-[calc(50%+4.4rem)] z-[86] rounded-full border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] px-2 py-1 font-vtt-display text-[0.62rem] uppercase tracking-[0.18em] text-[var(--vtt-text-muted)]">
-            +{mapParticipants.hiddenPlayers}
+        {mapParticipants?.all ? (
+          <div className="pointer-events-auto absolute left-3 top-20 bottom-24 z-[86] flex flex-col gap-3 overflow-y-auto w-[min(100%,11rem)] xl:w-[12rem] hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {mapParticipants.all.map((p) => (
+              <VideoThumb
+                key={p.id}
+                stream={p.stream}
+                name={p.label}
+                avatarUrl={p.avatarUrl}
+                muted={p.muted}
+                compact
+                featured={p.isDm}
+                handRaised={p.id === 'local' ? localHandRaised : false}
+              />
+            ))}
           </div>
         ) : null}
 

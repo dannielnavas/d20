@@ -48,11 +48,21 @@ export function registerChatHandlers(io: Server, socket: Socket) {
     const room = getOrCreateRoom(roomId)
     const targets = getMentionTargetsFromRoom(room)
     const mentions = parseMentionsInText(trimmed, targets).slice(0, MAX_MENTIONS)
-    const entry = {
+
+    let finalMsgText = trimmed
+    let isWhisper = false
+    if (finalMsgText.toLowerCase().startsWith('/w ')) {
+      isWhisper = true
+      finalMsgText = finalMsgText.slice(3).trim()
+    }
+
+    const entry: RoomState['chatLog'][number] = {
       id: `chat-${randomUUID().replace(/-/g, '').slice(0, 16)}`,
       author: authorName(room, data),
-      text: trimmed,
+      authorSessionId: data.playerSessionId ?? undefined,
+      text: finalMsgText,
       ts: Date.now(),
+      whisper: isWhisper ? true : undefined,
       ...(mentions.length > 0 ? { mentions } : {}),
     }
     room.chatLog.unshift(entry)

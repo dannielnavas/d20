@@ -21,8 +21,10 @@ export type Token = {
 export type ChatMessage = {
   id: string
   author: string
+  authorSessionId?: string
   text: string
   ts: number
+  whisper?: boolean
   /** Destinatarios: ids de sesión de jugador o `__dm__` para el director. */
   mentions?: string[]
 }
