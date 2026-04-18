@@ -10,10 +10,9 @@ import { ThemeToggle } from '../components/ThemeToggle'
 import { ChatPanel } from '../components/chat/ChatPanel'
 import { PrivateNotesPanel } from '../components/chat/PrivateNotesPanel'
 import { DmHudColumn } from '../components/dm/DmHudColumn'
-import { ScreenReactionPalette } from '../components/reactions/ScreenReactionPalette'
+import { PlayerHudColumn } from '../components/player/PlayerHudColumn'
 import { ScreenReactionOverlay } from '../components/reactions/ScreenReactionOverlay'
 import { ImageRevealModal } from '../components/reveal/ImageRevealModal'
-import { ImageRevealTool } from '../components/reveal/ImageRevealTool'
 import { TurnTimerHud } from '../components/timer/TurnTimerHud'
 import { usePlayerSessionId } from '../hooks/usePlayerSessionId'
 import { D20_ROLL_GIF, sessionPwdStorageKey } from '../hooks/playroom/constants'
@@ -92,7 +91,6 @@ export function PlayRoom() {
   useInitiativeTurnNotify(state, session)
 
   const [chatExpanded, setChatExpanded] = useState(true)
-  const [playerToolsExpanded, setPlayerToolsExpanded] = useState(true)
   const { toast: mentionToast, dismissToast: dismissMentionToast } = useChatMentionNotify(
     state,
     session,
@@ -488,67 +486,26 @@ export function PlayRoom() {
           />
         ) : null}
 
-        {showMap && state && socket && session?.role === 'player' ? (
-          <div className="pointer-events-auto fixed right-3 top-24 z-[88] flex w-[min(20rem,calc(100vw-1rem))] flex-col gap-3 items-end">
-            {canUseDicePanel ? (
-              <DicePanel
-                socket={socket}
-                roomState={state}
-                isDm={false}
-                playerSessionId={playerSessionId}
-                canRequestRoll={Boolean(session.claimedTokenId)}
-                layout="dock"
-              />
-            ) : null}
-            <section className="vtt-surface vtt-glow-border rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 p-2 shadow-lg backdrop-blur-sm">
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface-warm)] px-3 py-2 text-left font-vtt-display text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--vtt-gold)] hover:border-[var(--vtt-gold-dim)]"
-                onClick={() => setPlayerToolsExpanded((v) => !v)}
-                aria-expanded={playerToolsExpanded}
-              >
-                Herramientas de jugador
-                <span className="text-[var(--vtt-text-muted)]" aria-hidden>
-                  {playerToolsExpanded ? '−' : '+'}
-                </span>
-              </button>
-              {playerToolsExpanded ? (
-                <div className="mt-2 space-y-2">
-                  <div className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface-warm)]/75 p-2">
-                    <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]">
-                      Reacciones
-                    </p>
-                    <ScreenReactionPalette socket={socket} />
-                  </div>
-                  {state.settings.playersCanRevealImage && session.claimedTokenId ? (
-                    <ImageRevealTool socket={socket} variant="player" />
-                  ) : null}
-                </div>
-              ) : null}
-            </section>
-            <section className="vtt-surface vtt-glow-border rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 p-2 shadow-lg backdrop-blur-sm">
-              <InitiativePanel
-                placement="inline"
-                initiative={state.initiative}
-                tokens={allPlayerCharacters(state)}
-                isDm={false}
-                onToggleVisibility={onInitiativeToggleVisibility}
-                onMove={onInitiativeMove}
-                onSetCurrent={onInitiativeSetCurrent}
-                onNext={onInitiativeNext}
-                onRollAll={onInitiativeRollAll}
-                onSetModifier={onInitiativeSetModifier}
-              />
-            </section>
-          </div>
+        {showMap && state && socket && session?.role === 'player' && playerSessionId ? (
+          <PlayerHudColumn
+             roomId={roomId}
+             socket={socket}
+             roomState={state}
+             privateNotesPlayerPair={privateNotesPlayerPair}
+             chatExpanded={chatExpanded}
+             onChatExpandedChange={setChatExpanded}
+             initiativeTokens={allPlayerCharacters(state)}
+             playerSessionId={playerSessionId}
+             canRequestRoll={Boolean(session.claimedTokenId)}
+          />
         ) : null}
 
-        {showMap && state && socket && !isDm ? (
+        {showMap && state && socket && session?.role === 'spectator' ? (
           <ChatPanel
             socket={socket}
             roomState={state}
             open={showMap}
-            readOnly={session?.role === 'spectator'}
+            readOnly={true}
             expanded={chatExpanded}
             onExpandedChange={setChatExpanded}
           />
@@ -662,12 +619,12 @@ export function PlayRoom() {
           />
         ) : null}
 
-        {socket && state && session?.role === 'player' && playerSessionId ? (
+        {socket && state && session?.role === 'player' && playerSessionId && !showMap && showLobby ? (
           <PrivateNotesPanel
             variant="player"
             socket={socket}
             pair={privateNotesPlayerPair}
-            open={showLobby || showMap}
+            open={showLobby}
           />
         ) : null}
 
