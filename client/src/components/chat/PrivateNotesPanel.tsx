@@ -9,6 +9,8 @@ type PrivateNotesPanelProps =
       socket: Socket
       pair: PrivateNotesPair | null
       open: boolean
+      layout?: 'floating' | 'dock'
+      nestedInHud?: boolean
     }
   | {
       variant: 'dm'
@@ -35,6 +37,8 @@ export function PrivateNotesPanel(props: PrivateNotesPanelProps) {
         pair={props.pair}
         expanded={expanded}
         onToggleExpand={() => setExpanded((e) => !e)}
+        layout={props.layout ?? 'floating'}
+        nestedInHud={props.nestedInHud ?? false}
       />
     )
   }
@@ -57,11 +61,15 @@ function PlayerPrivateNotes({
   pair,
   expanded,
   onToggleExpand,
+  layout,
+  nestedInHud,
 }: {
   socket: Socket
   pair: PrivateNotesPair | null
   expanded: boolean
   onToggleExpand: () => void
+  layout: 'floating' | 'dock'
+  nestedInHud: boolean
 }) {
   const dmText = pair?.dm ?? ''
   const [draftPlayer, setDraftPlayer] = useState(pair?.player ?? '')
@@ -77,21 +85,33 @@ function PlayerPrivateNotes({
     setTimeout(() => setFeedback(false), 2500)
   }, [draftPlayer, socket])
 
+  const shellClass =
+    layout === 'dock' && nestedInHud
+      ? 'relative z-auto flex w-full flex-col'
+      : layout === 'dock'
+        ? 'relative z-auto flex w-full flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 shadow-lg backdrop-blur-sm'
+        : 'fixed bottom-3 right-3 z-[85] flex w-[min(22rem,calc(100vw-1.5rem))] flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 shadow-lg backdrop-blur-sm'
+
+  const showInnerHeader = !(layout === 'dock' && nestedInHud)
+  const bodyOpen = nestedInHud ? true : expanded
+
   return (
     <section
-      className="fixed bottom-3 right-3 z-[85] flex w-[min(22rem,calc(100vw-1.5rem))] flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 shadow-lg backdrop-blur-sm"
+      className={shellClass}
       aria-label="Notas privadas con el director de juego"
     >
-      <button
-        type="button"
-        className="flex w-full items-center justify-between border-b border-[var(--vtt-border-subtle)] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--vtt-gold)]"
-        onClick={onToggleExpand}
-        aria-expanded={expanded}
-      >
-        Notas privadas (DM)
-        <span className="text-[var(--vtt-text-muted)]">{expanded ? '−' : '+'}</span>
-      </button>
-      {expanded ? (
+      {showInnerHeader ? (
+        <button
+          type="button"
+          className="flex w-full items-center justify-between border-b border-[var(--vtt-border-subtle)] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--vtt-gold)]"
+          onClick={onToggleExpand}
+          aria-expanded={expanded}
+        >
+          Notas privadas (DM)
+          <span className="text-[var(--vtt-text-muted)]">{expanded ? '−' : '+'}</span>
+        </button>
+      ) : null}
+      {bodyOpen ? (
         <div className="flex max-h-[min(22rem,50svh)] flex-col gap-2 overflow-y-auto p-3 text-sm">
           <div>
             <label

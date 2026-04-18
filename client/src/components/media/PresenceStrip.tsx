@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { Socket } from 'socket.io-client'
 import type { RoomState } from '../../types/room'
 import type { SessionState } from '../../types/session'
@@ -20,6 +20,7 @@ export function PresenceStrip({
   playerSessionId,
   compact = false,
 }: PresenceStripProps) {
+  const [expanded, setExpanded] = useState(true)
   const rows = useMemo(() => {
     return roomState.tokens
       .filter((t) => t.type === 'pc' && t.claimedBy)
@@ -54,49 +55,60 @@ export function PresenceStrip({
       }
       aria-label="Presencia en mesa"
     >
-      <p className="font-vtt-display text-[0.58rem] font-semibold uppercase tracking-[0.2em] text-[var(--vtt-text-muted)]">
-        Presencia
-      </p>
-      {rows.length > 0 ? (
-        <ul className="mt-1.5 flex flex-wrap gap-1.5">
-          {rows.map((r) => (
-            <li
-              key={r.sessionId}
-              className="inline-flex max-w-[12rem] items-center gap-1 rounded border border-[var(--vtt-border-subtle)] bg-[var(--vtt-bg)] px-1.5 py-0.5 text-[0.72rem] text-[var(--vtt-text)]"
-            >
-              <span className="min-w-0 truncate">{r.name}</span>
-              {r.raised ? (
-                <span className="shrink-0 text-[0.85rem]" title="Mano levantada" aria-hidden>
-                  ✋
-                </span>
-              ) : null}
-              {isDm && r.raised ? (
-                <button
-                  type="button"
-                  className="shrink-0 rounded px-1 text-[0.65rem] leading-none text-[var(--vtt-text-muted)] hover:bg-[var(--vtt-border-subtle)] hover:text-[var(--vtt-text)]"
-                  title="Quitar mano levantada"
-                  onClick={() => socket.emit('raiseHandDismiss', { playerSessionId: r.sessionId })}
-                >
-                  ✕
-                </button>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <button
+        type="button"
+        className="flex w-full items-center justify-between font-vtt-display text-[0.58rem] font-semibold uppercase tracking-[0.2em] text-[var(--vtt-text-muted)] hover:text-[var(--vtt-gold)]"
+        onClick={() => setExpanded((prev) => !prev)}
+        aria-expanded={expanded}
+      >
+        <span>Presencia</span>
+        <span>{expanded ? '−' : '+'}</span>
+      </button>
 
-      {canToggleOwn ? (
-        <button
-          type="button"
-          className={`mt-2 w-full rounded-[var(--vtt-radius-sm)] border px-2 py-1.5 font-vtt-display text-[0.65rem] font-semibold uppercase tracking-wide transition ${
-            mineRaised
-              ? 'border-[var(--vtt-gold)] bg-[var(--vtt-surface-warm)] text-[var(--vtt-gold)]'
-              : 'border-[var(--vtt-border)] bg-[var(--vtt-bg)] text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold-dim)]'
-          }`}
-          onClick={toggleMine}
-        >
-          {mineRaised ? 'Bajar la mano' : 'Levantar la mano'}
-        </button>
+      {expanded ? (
+        <>
+          {rows.length > 0 ? (
+            <ul className="mt-1.5 flex flex-wrap gap-1.5">
+              {rows.map((r) => (
+                <li
+                  key={r.sessionId}
+                  className="inline-flex max-w-[12rem] items-center gap-1 rounded border border-[var(--vtt-border-subtle)] bg-[var(--vtt-bg)] px-1.5 py-0.5 text-[0.72rem] text-[var(--vtt-text)]"
+                >
+                  <span className="min-w-0 truncate">{r.name}</span>
+                  {r.raised ? (
+                    <span className="shrink-0 text-[0.85rem]" title="Mano levantada" aria-hidden>
+                      ✋
+                    </span>
+                  ) : null}
+                  {isDm && r.raised ? (
+                    <button
+                      type="button"
+                      className="shrink-0 rounded px-1 text-[0.65rem] leading-none text-[var(--vtt-text-muted)] hover:bg-[var(--vtt-border-subtle)] hover:text-[var(--vtt-text)]"
+                      title="Quitar mano levantada"
+                      onClick={() => socket.emit('raiseHandDismiss', { playerSessionId: r.sessionId })}
+                    >
+                      ✕
+                    </button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {canToggleOwn ? (
+            <button
+              type="button"
+              className={`mt-2 w-full rounded-[var(--vtt-radius-sm)] border px-2 py-1.5 font-vtt-display text-[0.65rem] font-semibold uppercase tracking-wide transition ${
+                mineRaised
+                  ? 'border-[var(--vtt-gold)] bg-[var(--vtt-surface-warm)] text-[var(--vtt-gold)]'
+                  : 'border-[var(--vtt-border)] bg-[var(--vtt-bg)] text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold-dim)]'
+              }`}
+              onClick={toggleMine}
+            >
+              {mineRaised ? 'Bajar la mano' : 'Levantar la mano'}
+            </button>
+          ) : null}
+        </>
       ) : null}
     </div>
   )

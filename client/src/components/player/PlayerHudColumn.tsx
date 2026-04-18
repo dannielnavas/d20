@@ -91,6 +91,8 @@ export function PlayerHudColumn({
             socket={socket}
             pair={privateNotesPlayerPair}
             open
+            layout="dock"
+            nestedInHud
          />
       </DmCollapsibleCard>
 
