@@ -70,6 +70,38 @@ export function TokensLayer({
   const pendingEmitRef = useRef<{ tokenId: string; x: number; y: number } | null>(null)
   const [draggingId, setDraggingId] = useState<string | null>(null)
 
+  // Posiciones fantasma: tokens que OTROS usuarios están arrastrando
+  const [ghostPositions, setGhostPositions] = useState<Record<string, { x: number; y: number }>>({})
+  const ghostClearTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  useEffect(() => {
+    const onRemoteMove = (p: { tokenId?: string; x?: unknown; y?: unknown }) => {
+      if (typeof p.tokenId !== 'string') return
+      if (typeof p.x !== 'number' || typeof p.y !== 'number') return
+      // Solo aplicar si NO somos nosotros los que arrastramos ese token
+      if (dragRef.current?.tokenId === p.tokenId) return
+      setGhostPositions((prev) => ({ ...prev, [p.tokenId!]: { x: p.x as number, y: p.y as number } }))
+      // Limpiar el fantasma si no llegan más eventos en 800ms (arrastre terminó)
+      const existing = ghostClearTimers.current.get(p.tokenId!)
+      if (existing) clearTimeout(existing)
+      const t = setTimeout(() => {
+        setGhostPositions((prev) => {
+          const next = { ...prev }
+          delete next[p.tokenId!]
+          return next
+        })
+        ghostClearTimers.current.delete(p.tokenId!)
+      }, 800)
+      ghostClearTimers.current.set(p.tokenId!, t)
+    }
+    socket.on('tokenMove', onRemoteMove)
+    return () => {
+      socket.off('tokenMove', onRemoteMove)
+      ghostClearTimers.current.forEach((t) => clearTimeout(t))
+      ghostClearTimers.current.clear()
+    }
+  }, [socket])
+
   const [reactionByToken, setReactionByToken] = useState<
     Record<string, { reactionId: number; key: number }>
   >({})
@@ -272,6 +304,25 @@ export function TokensLayer({
           }
         />
       ))}
+      {/* Tokens fantasma: previews de arrastres remotos */}
+      {tokensOnMap
+        .filter((t) => ghostPositions[t.id] && draggingId !== t.id)
+        .map((t) => {
+          const ghost = ghostPositions[t.id]!
+          return (
+            <TokenSprite
+              key={`ghost-${t.id}`}
+              token={{ ...t, x: ghost.x, y: ghost.y }}
+              showNameLabel={false}
+              isDragging={false}
+              canDrag={false}
+              onPointerDown={() => {}}
+              reactionBurst={null}
+              handRaised={false}
+              isGhost
+            />
+          )
+        })}
     </div>
   )
 }

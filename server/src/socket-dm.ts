@@ -576,4 +576,15 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     syncInitiative(room)
     broadcastRoomState(io, room)
   })
+
+  socket.on('clearSessionSnapshot', async () => {
+    if (!assertDm(socket)) return
+    try {
+      const { clearSnapshot } = await import('./persistence.js')
+      await clearSnapshot()
+      socket.emit('snapshotCleared')
+    } catch (e) {
+      socket.emit('dmError', { message: 'Error al borrar el snapshot guardado.' })
+    }
+  })
 }

@@ -193,3 +193,34 @@ export async function persistNow(): Promise<void> {
   dirty = true
   await flushPersist()
 }
+
+/**
+ * Borra el snapshot guardado (Redis o disco).
+ * El DM puede llamarla para que, al próximo reinicio del servidor,
+ * arranque desde cero sin datos previos.
+ */
+export async function clearSnapshot(): Promise<void> {
+  // 1. Borrar de Redis si existe
+  const redis = await getRedisClient()
+  if (redis) {
+    try {
+      await redis.del(REDIS_KEY)
+      log.info('persistence: snapshot eliminado de Redis')
+    } catch (e) {
+      log.warn('persistence: error borrando snapshot de Redis', { err: String(e) })
+    }
+  }
+
+  // 2. Borrar también el archivo local si existe
+  const { unlink } = await import('node:fs/promises')
+  const filePath = getSnapshotPath()
+  try {
+    await unlink(filePath)
+    log.info('persistence: snapshot eliminado del disco', { filePath })
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException)?.code
+    if (code !== 'ENOENT') {
+      log.warn('persistence: error borrando snapshot del disco', { filePath, err: String(e) })
+    }
+  }
+}

@@ -53,11 +53,23 @@ export function DmHudColumn({
   const [pollModalOpen, setPollModalOpen] = useState(false)
   const [chatUnread, setChatUnread] = useState(0)
   const [chatDmSectionOpen, setChatDmSectionOpen] = useState(true)
+  const [clearConfirm, setClearConfirm] = useState(false)
+  const [clearDone, setClearDone] = useState(false)
   const dialogTitleId = useId()
 
   const onChatSectionExpanded = useCallback((open: boolean) => {
     setChatDmSectionOpen(open)
   }, [])
+
+  // Escuchar confirmación del servidor de que el snapshot fue borrado
+  useCallback(() => {
+    socket.on('snapshotCleared', () => {
+      setClearDone(true)
+      setClearConfirm(false)
+      setTimeout(() => setClearDone(false), 3000)
+    })
+    return () => { socket.off('snapshotCleared') }
+  }, [socket])()
 
   const chatBadge = useMemo(() => {
     if (chatUnread <= 0) return undefined
@@ -154,7 +166,37 @@ export function DmHudColumn({
         className="fixed right-3 top-[5.5rem] z-[89] flex w-[min(22rem,calc(100vw-1.5rem))] max-h-[calc(100svh-5.25rem)] flex-col gap-2 overflow-y-auto pb-2 [scrollbar-gutter:stable] sm:top-24"
         aria-label="Herramientas del director"
       >
-        <div className="sticky top-0 z-[1] flex shrink-0 justify-end bg-[var(--vtt-bg)]/80 pb-1 backdrop-blur-sm">
+        <div className="sticky top-0 z-[1] flex shrink-0 items-center justify-between gap-2 bg-[var(--vtt-bg)]/80 pb-1 backdrop-blur-sm">
+          {clearDone ? (
+            <span className="text-[0.65rem] font-semibold text-[var(--vtt-forest)]">✓ Caché borrada</span>
+          ) : clearConfirm ? (
+            <span className="flex items-center gap-1.5">
+              <span className="text-[0.65rem] text-[var(--vtt-danger-text)]">¿Confirmar?</span>
+              <button
+                type="button"
+                className="rounded border border-[var(--vtt-danger-border)] px-2 py-0.5 text-[0.65rem] font-semibold text-[var(--vtt-danger-text)] hover:bg-[var(--vtt-danger-bg)]"
+                onClick={() => { socket.emit('clearSessionSnapshot'); setClearConfirm(false) }}
+              >
+                Sí, borrar
+              </button>
+              <button
+                type="button"
+                className="rounded border border-[var(--vtt-border)] px-2 py-0.5 text-[0.65rem] text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold)]"
+                onClick={() => setClearConfirm(false)}
+              >
+                Cancelar
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              title="Borra el estado guardado en caché (Redis/disco). No afecta la sesión actual."
+              className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-bg)] px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)] hover:border-[var(--vtt-danger-border)] hover:text-[var(--vtt-danger-text)]"
+              onClick={() => setClearConfirm(true)}
+            >
+              Borrar caché
+            </button>
+          )}
           <button
             type="button"
             className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-[var(--vtt-surface-warm)] px-2.5 py-1 font-vtt-display text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-[var(--vtt-gold)] shadow-sm hover:border-[var(--vtt-gold-dim)]"

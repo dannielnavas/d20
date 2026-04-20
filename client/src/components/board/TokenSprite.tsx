@@ -15,6 +15,8 @@ export type TokenSpriteProps = {
   reactionBurst?: { reactionId: number; key: number } | null
   /** Solo DM: mano levantada del jugador que controla la ficha. */
   handRaised?: boolean
+  /** Modo fantasma: preview semitransparente de un token que otro está arrastrando. */
+  isGhost?: boolean
 }
 
 export function TokenSprite({
@@ -26,6 +28,7 @@ export function TokenSprite({
   onKeyDown,
   reactionBurst = null,
   handRaised = false,
+  isGhost = false,
 }: TokenSpriteProps) {
   const half = token.size / 2
 
@@ -43,9 +46,11 @@ export function TokenSprite({
   const badgeSize = Math.max(14, Math.min(22, Math.round(token.size * 0.28)))
 
   const circleClass = `relative touch-none rounded-full border-2 border-[var(--vtt-border)] bg-[var(--vtt-surface)] shadow-[0_4px_14px_rgba(0,0,0,0.45)] focus-visible:z-[1001] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vtt-gold)] ${
-    isDragging
-      ? 'z-[1000] scale-105 ring-2 ring-[var(--vtt-gold)] ring-offset-2 ring-offset-[var(--vtt-bg)]'
-      : 'z-[10]'
+    isGhost
+      ? 'z-[9] opacity-40 ring-2 ring-[var(--vtt-gold)]/60 ring-offset-1 ring-offset-transparent animate-pulse'
+      : isDragging
+        ? 'z-[1000] scale-105 ring-2 ring-[var(--vtt-gold)] ring-offset-2 ring-offset-[var(--vtt-bg)]'
+        : 'z-[10]'
   }`
 
   const nameBlock = showNameLabel ? (
@@ -129,6 +134,19 @@ export function TokenSprite({
         </span>
       </div>
     ) : null
+
+  if (isGhost) {
+    return (
+      <div className={columnClass} style={{ left: token.x - half, top: token.y - half }} aria-hidden>
+        <div
+          className={`vtt-token ${circleClass} pointer-events-none`}
+          style={circleStyle}
+        >
+          {inner}
+        </div>
+      </div>
+    )
+  }
 
   if (canDrag) {
     return (
