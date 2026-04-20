@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useId, useState } from 'react'
 import type { Socket } from 'socket.io-client'
 import type { Token } from '../../types/room'
 import {
@@ -128,6 +128,7 @@ function TokenRosterRow({
   showBenchAction,
   isInReserve = false,
 }: RowProps) {
+  const rowId = useId()
   const isPc = t.type === 'pc'
   const claimed = isPc && t.claimedBy !== null
   let status: string
@@ -142,10 +143,21 @@ function TokenRosterRow({
   }
 
   const [draft, setDraft] = useState(() => (t.conditions ?? []).join(', '))
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState(t.name)
+  const [editImg, setEditImg] = useState(t.img ?? '')
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     setDraft((t.conditions ?? []).join(', '))
   }, [t.conditions, t.id])
+
+  useEffect(() => {
+    if (!editing) {
+      setEditName(t.name)
+      setEditImg(t.img ?? '')
+    }
+  }, [t.name, t.img, editing])
 
   const applyConditions = useCallback(() => {
     if (!socket) return
@@ -168,6 +180,18 @@ function TokenRosterRow({
     socket.emit('npcSetOnMap', { tokenId: t.id, onMap: false })
   }, [socket, t.id])
 
+  const saveEdit = useCallback(() => {
+    if (!socket) return
+    socket.emit('tokenPatch', { tokenId: t.id, name: editName.trim() || t.name, img: editImg.trim() })
+    setEditing(false)
+  }, [socket, t.id, t.name, editName, editImg])
+
+  const doDelete = useCallback(() => {
+    if (!socket) return
+    socket.emit('tokenDelete', { tokenId: t.id })
+    setConfirmDelete(false)
+  }, [socket, t.id])
+
   const sizeCategory = ddCategoryFromPixelSize(t.size, gridSize)
   const onSizeCategoryChange = useCallback(
     (cat: DdTokenSizeCategory) => {
@@ -180,6 +204,7 @@ function TokenRosterRow({
 
   return (
     <li className="flex flex-col gap-2 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-bg-elevated)] px-3 py-2.5 transition hover:border-[var(--vtt-border)]">
+      {/* Cabecera de la fila */}
       <div className="flex items-center gap-3">
         <div
           className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[var(--vtt-border)] bg-[var(--vtt-surface-warm)]"
@@ -208,7 +233,94 @@ function TokenRosterRow({
         >
           {isPc ? 'PJ' : 'PNJ'}
         </span>
+        {/* Botones Editar / Eliminar */}
+        {socket ? (
+          <div className="flex shrink-0 gap-1">
+            <button
+              type="button"
+              title="Editar nombre e imagen"
+              aria-label={`Editar ${t.name}`}
+              aria-expanded={editing}
+              aria-controls={`${rowId}-edit`}
+              className={`rounded border px-1.5 py-0.5 text-[0.65rem] font-semibold transition ${
+                editing
+                  ? 'border-[var(--vtt-gold)] bg-[var(--vtt-surface-warm)] text-[var(--vtt-gold)]'
+                  : 'border-[var(--vtt-border-subtle)] text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold)] hover:text-[var(--vtt-gold)]'
+              }`}
+              onClick={() => { setEditing((e) => !e); setConfirmDelete(false) }}
+            >
+              ✏️
+            </button>
+            {confirmDelete ? (
+              <>
+                <button
+                  type="button"
+                  title="Confirmar eliminación"
+                  className="rounded border border-[var(--vtt-ember)]/60 bg-[var(--vtt-danger-bg)] px-1.5 py-0.5 text-[0.65rem] font-semibold text-[var(--vtt-danger-text)] hover:bg-[var(--vtt-ember)]/20"
+                  onClick={doDelete}
+                >
+                  ✓ Borrar
+                </button>
+                <button
+                  type="button"
+                  title="Cancelar"
+                  className="rounded border border-[var(--vtt-border-subtle)] px-1.5 py-0.5 text-[0.65rem] text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold)]"
+                  onClick={() => setConfirmDelete(false)}
+                >
+                  ✕
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                title="Eliminar ficha"
+                aria-label={`Eliminar ${t.name}`}
+                className="rounded border border-[var(--vtt-border-subtle)] px-1.5 py-0.5 text-[0.65rem] text-[var(--vtt-text-muted)] transition hover:border-[var(--vtt-ember)]/60 hover:text-[var(--vtt-danger-text)]"
+                onClick={() => { setConfirmDelete(true); setEditing(false) }}
+              >
+                🗑
+              </button>
+            )}
+          </div>
+        ) : null}
       </div>
+
+      {/* Panel de edición inline */}
+      {editing ? (
+        <div id={`${rowId}-edit`} className="flex flex-col gap-2 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-bg)] p-2">
+          <label className="block text-[0.65rem] text-[var(--vtt-text-muted)]">
+            Nombre
+            <input
+              type="text"
+              className="vtt-input mt-1 text-xs"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              maxLength={60}
+              autoFocus
+            />
+          </label>
+          <label className="block text-[0.65rem] text-[var(--vtt-text-muted)]">
+            URL de imagen
+            <input
+              type="url"
+              className="vtt-input mt-1 text-xs"
+              value={editImg}
+              onChange={(e) => setEditImg(e.target.value)}
+              placeholder="https://…"
+              maxLength={2000}
+            />
+          </label>
+          <div className="flex gap-2">
+            <button type="button" className="vtt-btn-primary flex-1 text-xs" onClick={saveEdit}>
+              Guardar cambios
+            </button>
+            <button type="button" className="vtt-btn-secondary text-xs" onClick={() => setEditing(false)}>
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {socket && isInReserve ? (
         <button type="button" className="vtt-btn-primary w-full text-xs" onClick={activateReserve}>
           Sacar al mapa (centro)

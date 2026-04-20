@@ -11,6 +11,7 @@ import { assertDm } from './socket-dm-assert.js'
 import type { VttSocketData } from './socket-data.js'
 import { allRoomTokens, findTokenInRoom, getActiveScene } from './scene-helpers.js'
 import type { RoomState, Token } from './types.js'
+import { schedulePersist } from './persistence.js'
 
 type SettingsPatch = Partial<
   import('./types.js').SceneMapSettings & import('./types.js').RoomGlobalSettings
@@ -391,6 +392,56 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     broadcastRoomState(io, room)
   })
 
+  socket.on('tokenDelete', (payload: unknown) => {
+    if (!assertDm(socket)) return
+    const roomId = (socket.data as VttSocketData).roomId
+    if (!roomId) return
+    if (typeof payload !== 'object' || payload === null) return
+    const o = payload as Record<string, unknown>
+    const tokenId = typeof o.tokenId === 'string' ? o.tokenId.trim() : ''
+    if (!tokenId) return
+
+    const room = getOrCreateRoom(roomId)
+    let deleted = false
+    for (const scene of room.scenes) {
+      const idx = scene.tokens.findIndex((t) => t.id === tokenId)
+      if (idx !== -1) {
+        scene.tokens.splice(idx, 1)
+        deleted = true
+        break
+      }
+    }
+    if (!deleted) return
+    clearRaisedHandForToken(room, tokenId)
+    syncInitiative(room)
+    schedulePersist()
+    broadcastRoomState(io, room)
+  })
+
+  socket.on('tokenPatch', (payload: unknown) => {
+    if (!assertDm(socket)) return
+    const roomId = (socket.data as VttSocketData).roomId
+    if (!roomId) return
+    if (typeof payload !== 'object' || payload === null) return
+    const o = payload as Record<string, unknown>
+    const tokenId = typeof o.tokenId === 'string' ? o.tokenId.trim() : ''
+    if (!tokenId) return
+
+    const room = getOrCreateRoom(roomId)
+    const token = findTokenInRoom(room, tokenId)
+    if (!token) return
+
+    if (typeof o.name === 'string' && o.name.trim()) {
+      token.name = o.name.trim().slice(0, 60)
+    }
+    if (typeof o.img === 'string') {
+      token.img = o.img.trim().slice(0, 2000)
+    }
+
+    schedulePersist()
+    broadcastRoomState(io, room)
+  })
+
   socket.on('npcSetOnMap', (payload: unknown) => {
     if (!assertDm(socket)) return
     const roomId = (socket.data as VttSocketData).roomId
@@ -431,7 +482,42 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     broadcastRoomState(io, room)
   })
 
-  socket.on('spawnPc', (payload: unknown) => {
+  /**
+   * El DM libera el claim de un PJ para que pueda ser reclamado de nuevo.
+   * Útil cuando el jugador pierde su sessionId (nuevo dispositivo, borró localStorage, etc.)
+   * o para reasignar el personaje a otro jugador en la misma sesión.
+   */
+  socket.on('tokenReleaseClaim', (payload: unknown) => {
+    if (!assertDm(socket)) return
+    const roomId = (socket.data as VttSocketData).roomId
+    if (!roomId) return
+    if (typeof payload !== 'object' || payload === null) return
+    const o = payload as Record<string, unknown>
+    const tokenId = typeof o.tokenId === 'string' ? o.tokenId.trim() : ''
+    if (!tokenId) return
+
+    const room = getOrCreateRoom(roomId)
+
+    // Liberar en TODAS las escenas (los PCs viajan entre escenas)
+    let freed = false
+    for (const scene of room.scenes) {
+      const token = scene.tokens.find((t) => t.id === tokenId)
+      if (token && token.type === 'pc') {
+        token.claimedBy = null
+        token.ownerSocket = null
+        freed = true
+      }
+    }
+    if (!freed) return
+
+    // Notificar a todos los sockets de la sala para que actualicen su sessionState
+    io.to(roomId).emit('claimReleased', { tokenId })
+
+    schedulePersist()
+    broadcastRoomState(io, room)
+  })
+
+
     if (!assertDm(socket)) return
     const roomId = (socket.data as VttSocketData).roomId
     if (!roomId) return

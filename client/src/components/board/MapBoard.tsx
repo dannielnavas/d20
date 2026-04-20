@@ -24,6 +24,7 @@ import { loadYoutubeIframeApi, parseYoutubeUrl, youtubeEmbedSrc } from '../../ut
 import { MapPingBridge } from './MapPingLayer'
 import { ScreenReactionPalette } from '../reactions/ScreenReactionPalette'
 import { TokensLayer } from './TokensLayer'
+import { DmQuickNpcPanel } from '../dm/DmQuickNpcPanel'
 
 type YoutubeMapPlayer = {
   destroy: () => void
@@ -489,6 +490,14 @@ export function MapBoard({
               <div className="pointer-events-auto absolute bottom-12 left-3 z-[1998] max-w-[calc(100%-1.5rem)] rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 px-2 py-1.5 shadow-lg backdrop-blur-sm">
                 <ScreenReactionPalette socket={socket} />
               </div>
+            ) : null}
+
+            {isDm ? (
+              <DmQuickNpcPanel
+                tokens={roomState.tokens}
+                socket={socket}
+                getSpawnCenter={getSpawnCenter}
+              />
             ) : null}
 
             {(showMapAudioButton || showVolumeControl) && !(isDm && suppressDmMapVideoChrome) ? (
