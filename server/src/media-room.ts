@@ -1,4 +1,4 @@
-type MediaPeerInfo = { displayName: string; avatarUrl: string | null }
+type MediaPeerInfo = { displayName: string; avatarUrl: string | null; frameColor: string | null }
 
 /** Participantes con AV activo por sala (socketId → metadatos). */
 const roomMediaPeers = new Map<string, Map<string, MediaPeerInfo>>()
@@ -17,18 +17,23 @@ export function mediaPeerJoin(
   socketId: string,
   displayName: string,
   avatarUrl?: string | null,
-): { others: { peerId: string; displayName: string; avatarUrl: string | null }[] } {
+  frameColor?: string | null,
+): { others: { peerId: string; displayName: string; avatarUrl: string | null; frameColor: string | null }[] } {
   const m = getMap(roomId)
   const trimmed = displayName.trim().slice(0, 48) || 'Participante'
   const avatar =
     typeof avatarUrl === 'string' && avatarUrl.trim().length > 0
       ? avatarUrl.trim().slice(0, 2000)
       : null
-  m.set(socketId, { displayName: trimmed, avatarUrl: avatar })
-  const others: { peerId: string; displayName: string; avatarUrl: string | null }[] = []
+  const color =
+    typeof frameColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(frameColor.trim())
+      ? frameColor.trim().toLowerCase()
+      : null
+  m.set(socketId, { displayName: trimmed, avatarUrl: avatar, frameColor: color })
+  const others: { peerId: string; displayName: string; avatarUrl: string | null; frameColor: string | null }[] = []
   for (const [id, info] of m) {
     if (id !== socketId) {
-      others.push({ peerId: id, displayName: info.displayName, avatarUrl: info.avatarUrl })
+      others.push({ peerId: id, displayName: info.displayName, avatarUrl: info.avatarUrl, frameColor: info.frameColor })
     }
   }
   return { others }

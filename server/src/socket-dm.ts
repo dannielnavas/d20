@@ -13,6 +13,17 @@ import { allRoomTokens, findTokenInRoom, getActiveScene } from './scene-helpers.
 import type { RoomState, Token } from './types.js'
 import { schedulePersist } from './persistence.js'
 
+const ALLOWED_FRAME_COLORS = new Set([
+  '#b48a3c',
+  '#8f4a2b',
+  '#365f8b',
+  '#5e7f42',
+  '#7a4c8f',
+  '#9a2f2f',
+  '#2f6f6f',
+  '#6a5a42',
+])
+
 type SettingsPatch = Partial<
   import('./types.js').SceneMapSettings & import('./types.js').RoomGlobalSettings
 >
@@ -94,6 +105,28 @@ function placeTokenXY(
   const y = baseY + Math.floor(slotIndex / 6) * step
   if (!ms.snapToGrid) return { x, y }
   return snapToGrid(x, y, ms.gridSize)
+}
+
+function canPatchToken(socket: Socket, token: Token): boolean {
+  const data = socket.data as VttSocketData
+  if (data.isDm) return true
+  if (data.isSpectator) return false
+  if (token.type !== 'pc') return false
+  if (!data.playerSessionId || !data.claimedTokenId) return false
+  if (token.claimedBy !== data.playerSessionId) return false
+  if (token.id !== data.claimedTokenId) return false
+  return token.ownerSocket === socket.id
+}
+
+function parseFrameColor(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim().toLowerCase()
+  return ALLOWED_FRAME_COLORS.has(trimmed) ? trimmed : null
+}
+
+function parseHpValue(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null
+  return Math.max(0, Math.round(value))
 }
 
 export function registerDmHandlers(io: Server, socket: Socket) {
@@ -356,12 +389,16 @@ export function registerDmHandlers(io: Server, socket: Socket) {
         id: `npc-${randomUUID().replace(/-/g, '').slice(0, 12)}`,
         name: parsed.name,
         img: parsed.img,
+        frameColor: '#b48a3c',
         x: 0,
         y: 0,
         size: parsed.size,
         type: 'npc',
         ownerSocket: null,
         claimedBy: null,
+        hitPointsCurrent: 0,
+        hitPointsMax: 0,
+        hitPointsTemp: 0,
         conditions: [],
         onMap: false,
       }
@@ -379,12 +416,16 @@ export function registerDmHandlers(io: Server, socket: Socket) {
       id: `npc-${randomUUID().replace(/-/g, '').slice(0, 12)}`,
       name: parsed.name,
       img: parsed.img,
+      frameColor: '#b48a3c',
       x,
       y,
       size: parsed.size,
       type: 'npc',
       ownerSocket: null,
       claimedBy: null,
+      hitPointsCurrent: 0,
+      hitPointsMax: 0,
+      hitPointsTemp: 0,
       conditions: [],
     }
 
@@ -419,7 +460,6 @@ export function registerDmHandlers(io: Server, socket: Socket) {
   })
 
   socket.on('tokenPatch', (payload: unknown) => {
-    if (!assertDm(socket)) return
     const roomId = (socket.data as VttSocketData).roomId
     if (!roomId) return
     if (typeof payload !== 'object' || payload === null) return
@@ -430,13 +470,32 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     const room = getOrCreateRoom(roomId)
     const token = findTokenInRoom(room, tokenId)
     if (!token) return
+    if (!canPatchToken(socket, token)) {
+      socket.emit('dmError', {
+        message: 'No puedes editar esa ficha. Solo el Narrador o el jugador que la controla pueden hacerlo.',
+      })
+      return
+    }
+
+    const isDm = Boolean((socket.data as VttSocketData).isDm)
 
     if (typeof o.name === 'string' && o.name.trim()) {
-      token.name = o.name.trim().slice(0, 60)
+      if (isDm) token.name = o.name.trim().slice(0, 60)
     }
     if (typeof o.img === 'string') {
       token.img = o.img.trim().slice(0, 2000)
     }
+    const frameColor = parseFrameColor(o.frameColor)
+    if (frameColor) token.frameColor = frameColor
+    const hpMax = parseHpValue(o.hitPointsMax)
+    const hpCurrent = parseHpValue(o.hitPointsCurrent)
+    const hpTemp = parseHpValue(o.hitPointsTemp)
+    if (hpMax !== null) token.hitPointsMax = hpMax
+    if (hpCurrent !== null) token.hitPointsCurrent = hpCurrent
+    if (hpTemp !== null) token.hitPointsTemp = hpTemp
+    token.hitPointsMax = Math.max(0, token.hitPointsMax ?? 0)
+    token.hitPointsCurrent = Math.max(0, Math.min(token.hitPointsCurrent ?? 0, token.hitPointsMax))
+    token.hitPointsTemp = Math.max(0, token.hitPointsTemp ?? 0)
 
     schedulePersist()
     broadcastRoomState(io, room)
@@ -517,60 +576,63 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     broadcastRoomState(io, room)
   })
 
-
-    if (!assertDm(socket)) return
-    const roomId = (socket.data as VttSocketData).roomId
-    if (!roomId) return
-
-    const parsed = parseSpawnPayload(payload, { defaultName: 'Héroe', allowCount: true })
-    if (!parsed) {
-      socket.emit('dmError', {
-        message: 'No pudimos añadir los personajes. Revisa cantidad, nombre o imagen.',
-      })
-      return
-    }
-
-    const raw = payload as Record<string, unknown>
-    const explicitImg =
-      typeof raw.img === 'string' && raw.img.trim() ? raw.img.trim().slice(0, 2000) : null
-
-    const room = getOrCreateRoom(roomId)
-    const baseName = parsed.name.trim() || 'Héroe'
-    const baseSlot = getActiveScene(room).tokens.filter(
-      (t) => t.type !== 'npc' || t.onMap !== false,
-    ).length
-
-    for (let i = 0; i < parsed.count; i++) {
-      const displayName = parsed.count > 1 ? `${baseName} ${i + 1}`.trim() : baseName
-      const slot = baseSlot + i
-      const { x, y } = placeTokenXY(room, parsed.x, parsed.y, slot)
-
-      let img: string
-      if (explicitImg) {
-        img = explicitImg
-      } else if (parsed.count === 1) {
-        img = parsed.img
-      } else {
-        img = randomPortrait()
+    socket.on('spawnPc', (payload: unknown) => {
+      if (!assertDm(socket)) return
+      const roomId = (socket.data as VttSocketData).roomId
+      if (!roomId) return
+      const parsed = parseSpawnPayload(payload, { defaultName: 'Héroe', allowCount: true })
+      if (!parsed) {
+        socket.emit('dmError', {
+          message: 'No pudimos añadir los personajes. Revisa cantidad, nombre o imagen.',
+        })
+        return
       }
 
-      const token: Token = {
-        id: `pc-${randomUUID().replace(/-/g, '').slice(0, 12)}`,
-        name: displayName.slice(0, 80),
-        img,
-        x,
-        y,
-        size: parsed.size,
-        type: 'pc',
-        ownerSocket: null,
-        claimedBy: null,
-        conditions: [],
-      }
-      getActiveScene(room).tokens.push(token)
-    }
+      const raw = payload as Record<string, unknown>
+      const explicitImg =
+        typeof raw.img === 'string' && raw.img.trim() ? raw.img.trim().slice(0, 2000) : null
 
-    broadcastRoomState(io, room)
-  })
+      const room = getOrCreateRoom(roomId)
+      const baseName = parsed.name.trim() || 'Héroe'
+      const baseSlot = getActiveScene(room).tokens.filter(
+        (t) => t.type !== 'npc' || t.onMap !== false,
+      ).length
+
+      for (let i = 0; i < parsed.count; i++) {
+        const displayName = parsed.count > 1 ? `${baseName} ${i + 1}`.trim() : baseName
+        const slot = baseSlot + i
+        const { x, y } = placeTokenXY(room, parsed.x, parsed.y, slot)
+
+        let img: string
+        if (explicitImg) {
+          img = explicitImg
+        } else if (parsed.count === 1) {
+          img = parsed.img
+        } else {
+          img = randomPortrait()
+        }
+
+        const token: Token = {
+          id: `pc-${randomUUID().replace(/-/g, '').slice(0, 12)}`,
+          name: displayName.slice(0, 80),
+          img,
+          frameColor: '#b48a3c',
+          x,
+          y,
+          size: parsed.size,
+          type: 'pc',
+          ownerSocket: null,
+          claimedBy: null,
+          hitPointsCurrent: 0,
+          hitPointsMax: 0,
+          hitPointsTemp: 0,
+          conditions: [],
+        }
+        getActiveScene(room).tokens.push(token)
+      }
+
+      broadcastRoomState(io, room)
+    })
 
   socket.on('setActiveScene', (payload: unknown) => {
     if (!assertDm(socket)) return

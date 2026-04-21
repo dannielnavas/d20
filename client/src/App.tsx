@@ -38,10 +38,10 @@ function Home() {
               d20
             </h1>
             <p className="mx-auto mt-5 max-w-md text-pretty text-[var(--vtt-text-muted)] md:mx-0">
-              Ligero y en tiempo real. Como jugador eliges personaje en el vestíbulo; como director
-              de juego preparas mapa, cuadrícula y personajes no jugadores. La clave del director se
-              valida de forma segura en el servidor. Si quieres, puedes proteger la mesa con una
-              contraseña que compartas solo con tu grupo (desde el panel del director).
+              Ligero y en tiempo real. Como jugador eliges personaje en el vestíbulo; como
+              Narrador preparas mapa, cuadrícula y personajes no jugadores. La clave del Narrador
+              se valida de forma segura en el servidor. Si quieres, puedes proteger la mesa con una
+              contraseña que compartas solo con tu grupo (desde el panel del Narrador).
             </p>
           </header>
 
@@ -53,7 +53,7 @@ function Home() {
               Entrar como jugador
             </Link>
             <Link to={dmDemoHref} className="vtt-btn-secondary">
-              Entrar como director
+              Entrar como Narrador
             </Link>
           </nav>
 

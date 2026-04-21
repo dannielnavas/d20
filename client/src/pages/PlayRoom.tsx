@@ -22,7 +22,8 @@ import { useDmTokenExchange } from '../hooks/playroom/useDmTokenExchange'
 import { usePlayRoomSocket } from '../hooks/playroom/usePlayRoomSocket'
 import { useRollFx } from '../hooks/playroom/useRollFx'
 import type { Token } from '../types/room'
-import { allPlayerCharacters } from '../utils/roomTokens'
+import type { CharacterClaimCustomization } from '../components/lobby/CharacterLobby'
+import { allPlayerCharacters, findTokenInRoomState } from '../utils/roomTokens'
 
 export function PlayRoom() {
   const { roomId = '' } = useParams<{ roomId: string }>()
@@ -38,6 +39,10 @@ export function PlayRoom() {
   const [appliedSessionPassword, setAppliedSessionPassword] = useState('')
   const [passwordInput, setPasswordInput] = useState('')
   const [rememberSessionPwd, setRememberSessionPwd] = useState(false)
+  const [pendingClaimCustomization, setPendingClaimCustomization] = useState<{
+    tokenId: string
+    customization: CharacterClaimCustomization
+  } | null>(null)
 
   const { rollFx, rollFxReveal, triggerRollFx, lastRollIdRef } = useRollFx()
 
@@ -137,14 +142,25 @@ export function PlayRoom() {
   )
 
   const onClaim = useCallback(
-    (tokenId: string) => {
+    (tokenId: string, customization: CharacterClaimCustomization) => {
       if (!socket) return
       setClaimingId(tokenId)
       setError(null)
+      setPendingClaimCustomization({ tokenId, customization })
       socket.emit('claimPc', { tokenId })
     },
     [socket, setClaimingId, setError],
   )
+
+  useEffect(() => {
+    if (!socket || !pendingClaimCustomization) return
+    if (session?.claimedTokenId !== pendingClaimCustomization.tokenId) return
+    socket.emit('tokenPatch', {
+      tokenId: pendingClaimCustomization.tokenId,
+      ...pendingClaimCustomization.customization,
+    })
+    setPendingClaimCustomization(null)
+  }, [pendingClaimCustomization, session?.claimedTokenId, socket])
 
   const isDm = session?.role === 'dm'
 
@@ -204,6 +220,8 @@ export function PlayRoom() {
   )
 
   const pcs = state ? allPlayerCharacters(state) : []
+  const currentPlayerToken =
+    state && session?.claimedTokenId ? findTokenInRoomState(state, session.claimedTokenId) ?? null : null
   const canUseDicePanel = Boolean(
     socket &&
     state &&
@@ -214,7 +232,7 @@ export function PlayRoom() {
 
   const sessionLabel =
     session?.role === 'dm'
-      ? 'Director de juego'
+      ? 'Narrador'
       : session?.role === 'spectator'
         ? 'Espectador: solo ves la mesa'
         : session?.claimedTokenId
@@ -379,8 +397,8 @@ export function PlayRoom() {
                 Contraseña de la mesa
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-[var(--vtt-text-muted)]">
-                El director de juego ha protegido esta mesa. Escribe la misma contraseña que
-                compartió con el grupo (no es la clave privada del director).
+                El Narrador ha protegido esta mesa. Escribe la misma contraseña que compartió con
+                el grupo (no es la clave privada del Narrador).
               </p>
               <div className="mt-5 flex flex-col gap-3">
                 <label
@@ -497,6 +515,7 @@ export function PlayRoom() {
              initiativeTokens={allPlayerCharacters(state)}
              playerSessionId={playerSessionId}
              canRequestRoll={Boolean(session.claimedTokenId)}
+             currentToken={currentPlayerToken}
           />
         ) : null}
 
@@ -527,7 +546,7 @@ export function PlayRoom() {
               </p>
               {rollRequestFeedback.outcome === 'approved' ? (
                 <p className="mt-1 text-sm text-[var(--vtt-text)]">
-                  El director dio luz verde. Puedes tirar cuando quieras con el dado y modo que
+                  El Narrador dio luz verde. Puedes tirar cuando quieras con el dado y modo que
                   elegiste al enviar la solicitud
                   {rollRequestFeedback.dieType ? (
                     <>
@@ -548,7 +567,7 @@ export function PlayRoom() {
                 </p>
               ) : (
                 <p className="mt-1 text-sm text-[var(--vtt-text-muted)]">
-                  El director descartó esta petición. Si sigue en juego, pregunta de nuevo o por el
+                  El Narrador descartó esta petición. Si sigue en juego, pregunta de nuevo o por el
                   chat.
                 </p>
               )}

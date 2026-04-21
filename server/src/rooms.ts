@@ -2,6 +2,28 @@ import { createEmptyRoom, type RoomState, type Token } from './types.js'
 import { getActiveScene, migrateRoomToScenes } from './scene-helpers.js'
 
 const rooms = new Map<string, RoomState>()
+const DEFAULT_TOKEN_FRAME_COLOR = '#b48a3c'
+
+function normalizeTokenShape(token: Token): void {
+  if (!Array.isArray(token.conditions)) token.conditions = []
+  if (typeof token.frameColor !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(token.frameColor)) {
+    token.frameColor = DEFAULT_TOKEN_FRAME_COLOR
+  } else {
+    token.frameColor = token.frameColor.toLowerCase()
+  }
+  if (typeof token.hitPointsMax !== 'number' || !Number.isFinite(token.hitPointsMax)) {
+    token.hitPointsMax = 0
+  }
+  if (typeof token.hitPointsCurrent !== 'number' || !Number.isFinite(token.hitPointsCurrent)) {
+    token.hitPointsCurrent = token.hitPointsMax
+  }
+  if (typeof token.hitPointsTemp !== 'number' || !Number.isFinite(token.hitPointsTemp)) {
+    token.hitPointsTemp = 0
+  }
+  token.hitPointsMax = Math.max(0, Math.round(token.hitPointsMax))
+  token.hitPointsCurrent = Math.max(0, Math.min(Math.round(token.hitPointsCurrent), token.hitPointsMax))
+  token.hitPointsTemp = Math.max(0, Math.round(token.hitPointsTemp))
+}
 
 function ensureRoomShape(room: RoomState): void {
   if (!Array.isArray(room.chatLog)) room.chatLog = []
@@ -39,7 +61,7 @@ function ensureRoomShape(room: RoomState): void {
   delete (room.settings as unknown as { fogOfWar?: unknown }).fogOfWar
   for (const sc of room.scenes) {
     for (const t of sc.tokens) {
-      if (!Array.isArray(t.conditions)) t.conditions = []
+      normalizeTokenShape(t)
     }
   }
   if (!room.privateNotesBySession || typeof room.privateNotesBySession !== 'object') {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useId, useState } from 'react'
 import type { Socket } from 'socket.io-client'
 import type { Token } from '../../types/room'
+import { DEFAULT_TOKEN_FRAME_COLOR, TOKEN_FRAME_COLORS } from '../../config/tokenFrameColors'
 import {
   DD_TOKEN_SIZE_LABELS,
   DD_TOKEN_SIZE_MULTIPLIERS,
@@ -146,6 +147,10 @@ function TokenRosterRow({
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState(t.name)
   const [editImg, setEditImg] = useState(t.img ?? '')
+  const [editFrameColor, setEditFrameColor] = useState(t.frameColor ?? DEFAULT_TOKEN_FRAME_COLOR)
+  const [editHpCurrent, setEditHpCurrent] = useState(t.hitPointsCurrent ?? 0)
+  const [editHpMax, setEditHpMax] = useState(t.hitPointsMax ?? 0)
+  const [editHpTemp, setEditHpTemp] = useState(t.hitPointsTemp ?? 0)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
@@ -156,8 +161,12 @@ function TokenRosterRow({
     if (!editing) {
       setEditName(t.name)
       setEditImg(t.img ?? '')
+      setEditFrameColor(t.frameColor ?? DEFAULT_TOKEN_FRAME_COLOR)
+      setEditHpCurrent(t.hitPointsCurrent ?? 0)
+      setEditHpMax(t.hitPointsMax ?? 0)
+      setEditHpTemp(t.hitPointsTemp ?? 0)
     }
-  }, [t.name, t.img, editing])
+  }, [t.name, t.img, t.frameColor, t.hitPointsCurrent, t.hitPointsMax, t.hitPointsTemp, editing])
 
   const applyConditions = useCallback(() => {
     if (!socket) return
@@ -182,9 +191,17 @@ function TokenRosterRow({
 
   const saveEdit = useCallback(() => {
     if (!socket) return
-    socket.emit('tokenPatch', { tokenId: t.id, name: editName.trim() || t.name, img: editImg.trim() })
+    socket.emit('tokenPatch', {
+      tokenId: t.id,
+      name: editName.trim() || t.name,
+      img: editImg.trim(),
+      frameColor: editFrameColor,
+      hitPointsCurrent: Math.max(0, editHpCurrent),
+      hitPointsMax: Math.max(0, editHpMax),
+      hitPointsTemp: Math.max(0, editHpTemp),
+    })
     setEditing(false)
-  }, [socket, t.id, t.name, editName, editImg])
+  }, [socket, t.id, t.name, editName, editImg, editFrameColor, editHpCurrent, editHpMax, editHpTemp])
 
   const doDelete = useCallback(() => {
     if (!socket) return
@@ -208,6 +225,7 @@ function TokenRosterRow({
       <div className="flex items-center gap-3">
         <div
           className="h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[var(--vtt-border)] bg-[var(--vtt-surface-warm)]"
+          style={{ borderColor: t.frameColor ?? DEFAULT_TOKEN_FRAME_COLOR }}
           aria-hidden
         >
           {t.img ? (
@@ -310,6 +328,53 @@ function TokenRosterRow({
               maxLength={2000}
             />
           </label>
+          <div>
+            <p className="text-[0.65rem] text-[var(--vtt-text-muted)]">Marco de cámara</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {TOKEN_FRAME_COLORS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`h-7 w-7 rounded-full border-2 transition ${editFrameColor === option.value ? 'scale-110 border-[var(--vtt-text)] shadow-[0_0_0_2px_rgba(255,255,255,0.08)]' : 'border-transparent opacity-85 hover:opacity-100'}`}
+                  style={{ backgroundColor: option.value }}
+                  title={option.label}
+                  onClick={() => setEditFrameColor(option.value)}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <label className="block text-[0.65rem] text-[var(--vtt-text-muted)]">
+              HP act.
+              <input
+                type="number"
+                min={0}
+                className="vtt-input mt-1 text-xs"
+                value={editHpCurrent}
+                onChange={(e) => setEditHpCurrent(Math.max(0, Number(e.target.value) || 0))}
+              />
+            </label>
+            <label className="block text-[0.65rem] text-[var(--vtt-text-muted)]">
+              HP máx.
+              <input
+                type="number"
+                min={0}
+                className="vtt-input mt-1 text-xs"
+                value={editHpMax}
+                onChange={(e) => setEditHpMax(Math.max(0, Number(e.target.value) || 0))}
+              />
+            </label>
+            <label className="block text-[0.65rem] text-[var(--vtt-text-muted)]">
+              Temp.
+              <input
+                type="number"
+                min={0}
+                className="vtt-input mt-1 text-xs"
+                value={editHpTemp}
+                onChange={(e) => setEditHpTemp(Math.max(0, Number(e.target.value) || 0))}
+              />
+            </label>
+          </div>
           <div className="flex gap-2">
             <button type="button" className="vtt-btn-primary flex-1 text-xs" onClick={saveEdit}>
               Guardar cambios

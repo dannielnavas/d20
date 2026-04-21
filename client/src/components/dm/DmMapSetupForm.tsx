@@ -167,8 +167,9 @@ export function DmMapSetupForm({
           Contraseña de la mesa
         </legend>
         <p className="mt-3 text-xs text-[var(--vtt-text-muted)]">
-          Todos la escriben al entrar a la mesa (es aparte de la clave del director). Deja el campo
-          vacío y pulsa «Quitar protección» si quieres que cualquiera pueda entrar sin contraseña.
+          Todos la escriben al entrar a la mesa (es aparte de la clave del Narrador). Deja el
+          campo vacío y pulsa «Quitar protección» si quieres que cualquiera pueda entrar sin
+          contraseña.
         </p>
         <p className="mt-2 text-xs font-medium text-[var(--vtt-text)]">
           Estado:{' '}

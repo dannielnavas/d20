@@ -44,6 +44,11 @@ export function TokenSprite({
   const conds = token.conditions?.filter(Boolean) ?? []
   const conditionsAria = conds.length > 0 ? ` Estados: ${conds.join(', ')}.` : ''
   const badgeSize = Math.max(14, Math.min(22, Math.round(token.size * 0.28)))
+  const hpMax = token.hitPointsMax ?? 0
+  const hpCurrent = Math.max(0, token.hitPointsCurrent ?? 0)
+  const hpTemp = Math.max(0, token.hitPointsTemp ?? 0)
+  const currentPct = hpMax > 0 ? Math.max(0, Math.min(100, (hpCurrent / hpMax) * 100)) : 0
+  const tempPct = hpMax > 0 ? Math.max(0, Math.min(100 - currentPct, (hpTemp / hpMax) * 100)) : 0
 
   const circleClass = `relative touch-none rounded-full border-2 border-[var(--vtt-border)] bg-[var(--vtt-surface)] shadow-[0_4px_14px_rgba(0,0,0,0.45)] focus-visible:z-[1001] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vtt-gold)] ${
     isGhost
@@ -60,6 +65,28 @@ export function TokenSprite({
     >
       {token.name}
     </span>
+  ) : null
+
+  const hpBlock = hpMax > 0 || hpCurrent > 0 || hpTemp > 0 ? (
+    <div className="mt-1 w-[min(5.25rem,16vw)]" aria-hidden>
+      <div className="overflow-hidden rounded-full border border-black/40 bg-black/65 shadow-[0_3px_10px_rgba(0,0,0,0.3)]">
+        <div className="relative h-2 w-full bg-[rgba(90,26,26,0.85)]">
+          <div
+            className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,#8b2f22,#d96a3f)]"
+            style={{ width: `${currentPct}%` }}
+          />
+          {tempPct > 0 ? (
+            <div
+              className="absolute inset-y-0 bg-[linear-gradient(90deg,#70b7c5,#d4f0f5)]"
+              style={{ left: `${currentPct}%`, width: `${tempPct}%` }}
+            />
+          ) : null}
+        </div>
+      </div>
+      <p className="mt-0.5 text-center font-vtt-display text-[0.52rem] font-semibold uppercase tracking-[0.12em] text-[var(--vtt-text)] drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+        {hpCurrent}/{hpMax}{hpTemp > 0 ? ` +${hpTemp}` : ''}
+      </p>
+    </div>
   ) : null
 
   const reactionEmoji =
@@ -140,7 +167,7 @@ export function TokenSprite({
       <div className={columnClass} style={{ left: token.x - half, top: token.y - half }} aria-hidden>
         <div
           className={`vtt-token ${circleClass} pointer-events-none`}
-          style={circleStyle}
+          style={{ ...circleStyle, borderColor: token.frameColor ?? 'var(--vtt-border)' }}
         >
           {inner}
         </div>
@@ -159,7 +186,7 @@ export function TokenSprite({
           aria-label={`${token.name}, ${kind}.${conditionsAria} Usa flechas para mover; Mayús aumenta el paso.`}
           title={`${token.name} — arrastra o usa flechas para mover`}
           className={`vtt-token ${circleClass} pointer-events-auto cursor-grab active:cursor-grabbing`}
-          style={circleStyle}
+          style={{ ...circleStyle, borderColor: token.frameColor ?? 'var(--vtt-border)' }}
           onPointerDown={(e) => {
             if (e.pointerType === 'mouse' && e.button !== 0) return
             onPointerDown(e, token)
@@ -170,6 +197,7 @@ export function TokenSprite({
         >
           {inner}
         </button>
+        {hpBlock}
         {nameBlock}
       </div>
     )
@@ -185,10 +213,11 @@ export function TokenSprite({
         aria-label={`${token.name}, ${kind}.${conditionsAria}`}
         title={`${token.name} — no puedes moverlo`}
         className={`vtt-token ${circleClass} pointer-events-none opacity-75`}
-        style={circleStyle}
+        style={{ ...circleStyle, borderColor: token.frameColor ?? 'var(--vtt-border)' }}
       >
         {inner}
       </div>
+      {hpBlock}
       {nameBlock}
     </div>
   )

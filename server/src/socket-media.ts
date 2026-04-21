@@ -50,6 +50,7 @@ export function registerMediaHandlers(io: Server, socket: Socket) {
 
     let displayName = 'Participante'
     let avatarUrl: string | null = null
+    let frameColor: string | null = null
     if (typeof payload === 'object' && payload !== null) {
       const o = payload as Record<string, unknown>
       if (typeof o.displayName === 'string' && o.displayName.trim()) {
@@ -58,15 +59,30 @@ export function registerMediaHandlers(io: Server, socket: Socket) {
       if (typeof o.avatarUrl === 'string' && o.avatarUrl.trim()) {
         avatarUrl = o.avatarUrl.trim().slice(0, 2000)
       }
+      if (typeof o.frameColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(o.frameColor.trim())) {
+        frameColor = o.frameColor.trim().toLowerCase()
+      }
     }
 
-    const { others } = mediaPeerJoin(roomId, socket.id, displayName, avatarUrl)
+    const wasInRoom = isMediaPeerInRoom(roomId, socket.id)
+    const { others } = mediaPeerJoin(roomId, socket.id, displayName, avatarUrl, frameColor)
 
-    socket.emit('mediaPeersSnapshot', { peers: others })
-    socket.to(roomId).emit('mediaPeerJoined', {
+    if (!wasInRoom) {
+      socket.emit('mediaPeersSnapshot', { peers: others })
+      socket.to(roomId).emit('mediaPeerJoined', {
+        peerId: socket.id,
+        displayName: displayName.trim().slice(0, 48) || 'Participante',
+        avatarUrl,
+        frameColor,
+      })
+      return
+    }
+
+    socket.to(roomId).emit('mediaPeerUpdated', {
       peerId: socket.id,
       displayName: displayName.trim().slice(0, 48) || 'Participante',
       avatarUrl,
+      frameColor,
     })
   })
 

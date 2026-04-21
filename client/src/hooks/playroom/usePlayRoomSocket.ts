@@ -131,7 +131,7 @@ export function usePlayRoomSocket(
     const onTokenError = (payload: { message?: string }) => {
       setError(
         payload?.message ??
-          'Esa ficha no la controlas tú: elige la tuya o pide permiso al director.',
+          'Esa ficha no la controlas tú: elige la tuya o pide permiso al Narrador.',
       )
     }
     const onClaimError = (payload: { message?: string }) => {
@@ -142,7 +142,7 @@ export function usePlayRoomSocket(
       )
     }
     const onDmError = (payload: { message?: string }) => {
-      setError(payload?.message ?? 'Solo el director de juego puede hacer eso desde su panel.')
+      setError(payload?.message ?? 'Solo el Narrador puede hacer eso desde su panel.')
     }
 
     const applyTokenPos = ({ tokenId, x, y }: TokenPosEvent) => {
@@ -354,7 +354,9 @@ export function usePlayRoomSocket(
     if (lastChatIdRef.current !== latest.id) {
       lastChatIdRef.current = latest.id
       
-      const isOurs = (latest.authorSessionId && joinPayload?.playerSessionId === latest.authorSessionId) || (latest.author === 'DM' && session?.role === 'dm')
+      const isOurs =
+        (latest.authorSessionId && joinPayload?.playerSessionId === latest.authorSessionId) ||
+        ((latest.author === 'DM' || latest.author === 'Narrador') && session?.role === 'dm')
       if (!isOurs) {
         if (latest.whisper) {
           playWhisperSound()

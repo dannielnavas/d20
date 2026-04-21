@@ -19,13 +19,16 @@ type MediaDockProps = {
   session: SessionState
   roomState: RoomState
   layout: MediaDockLayout
-  /** Jugador: id de sesión para mano levantada. */
   playerSessionId?: string | null
-  /** Director: puede quitar manos desde presencia. */
   isDm?: boolean
 }
 
-type RemoteTile = { stream: MediaStream; label: string; avatarUrl: string | null }
+type RemoteTile = {
+  stream: MediaStream
+  label: string
+  avatarUrl: string | null
+  frameColor: string | null
+}
 
 function iceServers(): RTCIceServer[] {
   const raw = import.meta.env.VITE_STUN_URLS as string | undefined
@@ -40,20 +43,33 @@ function iceServers(): RTCIceServer[] {
 }
 
 function localDisplayName(session: SessionState, roomState: RoomState): string {
-  if (session.role === 'dm') return 'DM'
+  if (session.role === 'dm') return 'Narrador'
   if (session.role === 'spectator') return 'Espectador'
   const id = session.claimedTokenId
   if (!id) return 'Jugador'
-  const t = roomState.scenes.flatMap((s) => s.tokens).find((x) => x.id === id)
-  return t?.name ?? 'Jugador'
+  const token = roomState.scenes.flatMap((scene) => scene.tokens).find((item) => item.id === id)
+  return token?.name ?? 'Jugador'
 }
 
 function localAvatarUrl(session: SessionState, roomState: RoomState): string | null {
   if (session.role === 'dm' || session.role === 'spectator') return null
   const id = session.claimedTokenId
   if (!id) return null
-  const t = roomState.scenes.flatMap((s) => s.tokens).find((x) => x.id === id)
-  return t?.img ?? null
+  const token = roomState.scenes.flatMap((scene) => scene.tokens).find((item) => item.id === id)
+  return token?.img ?? null
+}
+
+function localFrameColor(session: SessionState, roomState: RoomState): string | null {
+  if (session.role === 'dm') return '#d4b061'
+  if (session.role === 'spectator') return '#6a5a42'
+  const id = session.claimedTokenId
+  if (!id) return '#b48a3c'
+  const token = roomState.scenes.flatMap((scene) => scene.tokens).find((item) => item.id === id)
+  return token?.frameColor ?? '#b48a3c'
+}
+
+function isNarratorLabel(label: string): boolean {
+  return label.trim().toLowerCase() === 'narrador'
 }
 
 type IconBtnProps = {
@@ -100,46 +116,71 @@ function VideoThumb({
   stream,
   name,
   avatarUrl,
+  frameColor,
   muted,
   compact,
   featured,
   handRaised,
+  isNarrator = false,
 }: {
   stream: MediaStream
   name: string
   avatarUrl?: string | null
+  frameColor?: string | null
   muted?: boolean
   compact: boolean
   featured?: boolean
   handRaised?: boolean
+  isNarrator?: boolean
 }) {
   const ref = useRef<HTMLVideoElement>(null)
+
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    el.srcObject = stream
-    void el.play().catch(() => {})
+    const element = ref.current
+    if (!element) return
+    element.srcObject = stream
+    void element.play().catch(() => {})
     return () => {
-      el.srcObject = null
+      element.srcObject = null
     }
   }, [stream])
 
+  const accent = frameColor ?? (isNarrator ? '#d4b061' : '#b48a3c')
+  const shellClass = compact
+    ? featured
+      ? 'relative h-[7.5rem] w-[12rem] shrink-0 overflow-hidden rounded-[1.1rem] border bg-black'
+      : 'relative h-[6.25rem] w-[10rem] shrink-0 overflow-hidden rounded-[1rem] border bg-black'
+    : 'relative aspect-video w-[min(100%,11rem)] shrink-0 overflow-hidden rounded-[1rem] border bg-black'
+
   return (
     <div
-      className={
-        compact
-          ? featured
-            ? 'relative h-[7.5rem] w-[12rem] shrink-0 overflow-hidden rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-black shadow-[0_6px_24px_rgba(0,0,0,0.55)] ring-1 ring-[rgba(201,164,58,0.12)]'
-            : 'relative h-[6.25rem] w-[10rem] shrink-0 overflow-hidden rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-black shadow-[0_6px_24px_rgba(0,0,0,0.55)] ring-1 ring-[rgba(201,164,58,0.12)]'
-          : 'relative aspect-video w-[min(100%,11rem)] shrink-0 overflow-hidden rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-black shadow-[0_6px_24px_rgba(0,0,0,0.45)] ring-1 ring-[rgba(201,164,58,0.1)]'
-      }
+      className={shellClass}
+      style={{
+        borderColor: accent,
+        boxShadow: `0 0 0 1px ${accent}44, 0 12px 36px rgba(0,0,0,0.55)`,
+      }}
     >
+      <div
+        className="pointer-events-none absolute inset-x-3 top-0 z-[2] h-3 rounded-b-full opacity-90"
+        style={{ background: `linear-gradient(180deg, ${accent}, transparent)` }}
+      />
+      <div
+        className="pointer-events-none absolute inset-y-3 left-0 z-[2] w-2 rounded-r-full opacity-75"
+        style={{ background: `linear-gradient(180deg, transparent, ${accent}, transparent)` }}
+      />
+      <div
+        className="pointer-events-none absolute inset-y-3 right-0 z-[2] w-2 rounded-l-full opacity-75"
+        style={{ background: `linear-gradient(180deg, transparent, ${accent}, transparent)` }}
+      />
       <div className="flex h-full w-full items-stretch">
-        <div className="flex w-9 shrink-0 items-center justify-center border-r border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]">
+        <div
+          className="flex w-9 shrink-0 items-center justify-center border-r bg-[var(--vtt-bg-elevated)]"
+          style={{ borderColor: `${accent}55` }}
+        >
           {avatarUrl ? (
             <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
           ) : (
-            <span className="font-vtt-display text-[0.58rem] uppercase tracking-[0.12em] text-[var(--vtt-gold-dim)]">
+            <span className="font-vtt-display text-[0.58rem] uppercase tracking-[0.12em]" style={{ color: accent }}>
               {name.slice(0, 2)}
             </span>
           )}
@@ -162,8 +203,13 @@ function VideoThumb({
           ✋
         </span>
       ) : null}
+      {isNarrator ? (
+        <div className="pointer-events-none absolute left-1/2 top-1 z-[3] -translate-x-1/2 rounded-full px-2 py-0.5 font-vtt-display text-[0.45rem] font-semibold uppercase tracking-[0.24em] text-[var(--vtt-bg)]" style={{ backgroundColor: accent }}>
+          Narrador
+        </div>
+      ) : null}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-1 pb-1 pt-4">
-        <p className="truncate text-center font-vtt-display text-[0.55rem] font-semibold uppercase tracking-[0.22em] text-[var(--vtt-gold)]">
+        <p className="truncate text-center font-vtt-display text-[0.55rem] font-semibold uppercase tracking-[0.22em]" style={{ color: accent }}>
           {name}
         </p>
       </div>
@@ -181,10 +227,13 @@ export function MediaDock({
 }: MediaDockProps) {
   const label = useMemo(() => localDisplayName(session, roomState), [session, roomState])
   const avatarUrl = useMemo(() => localAvatarUrl(session, roomState), [session, roomState])
+  const frameColor = useMemo(() => localFrameColor(session, roomState), [session, roomState])
   const labelRef = useRef(label)
   labelRef.current = label
   const avatarRef = useRef<string | null>(avatarUrl)
   avatarRef.current = avatarUrl
+  const frameColorRef = useRef<string | null>(frameColor)
+  frameColorRef.current = frameColor
 
   const [inCall, setInCall] = useState(false)
   const [localStream, setLocalStream] = useState<MediaStream | null>(null)
@@ -197,6 +246,7 @@ export function MediaDock({
   const iceBufRef = useRef(new Map<string, RTCIceCandidateInit[]>())
   const labelsRef = useRef(new Map<string, string>())
   const avatarsRef = useRef(new Map<string, string | null>())
+  const frameColorsRef = useRef(new Map<string, string | null>())
   const localStreamRef = useRef<MediaStream | null>(null)
   localStreamRef.current = localStream
 
@@ -207,6 +257,7 @@ export function MediaDock({
         stream,
         label: labelsRef.current.get(peerId) ?? 'Participante',
         avatarUrl: avatarsRef.current.get(peerId) ?? null,
+        frameColor: frameColorsRef.current.get(peerId) ?? null,
       },
     }))
   }, [])
@@ -224,19 +275,18 @@ export function MediaDock({
     const pending = iceBufRef.current.get(peerId)
     if (!pending?.length) return
     iceBufRef.current.delete(peerId)
-    for (const c of pending) {
-      void pc.addIceCandidate(c).catch(() => {})
+    for (const candidate of pending) {
+      void pc.addIceCandidate(candidate).catch(() => {})
     }
   }, [])
 
   const closeAllPeers = useCallback(() => {
-    for (const pc of pcsRef.current.values()) {
-      pc.close()
-    }
+    for (const pc of pcsRef.current.values()) pc.close()
     pcsRef.current.clear()
     iceBufRef.current.clear()
     labelsRef.current.clear()
     avatarsRef.current.clear()
+    frameColorsRef.current.clear()
     setRemotes({})
   }, [])
 
@@ -247,16 +297,16 @@ export function MediaDock({
       pc = new RTCPeerConnection({ iceServers: iceServers() })
       pcsRef.current.set(remoteId, pc)
 
-      pc.onicecandidate = (ev) => {
-        if (!ev.candidate || !socket.connected) return
+      pc.onicecandidate = (event) => {
+        if (!event.candidate || !socket.connected) return
         socket.emit('webrtcSignal', {
           targetId: remoteId,
-          payload: { type: 'ice', candidate: ev.candidate.toJSON() },
+          payload: { type: 'ice', candidate: event.candidate.toJSON() },
         })
       }
 
-      pc.ontrack = (ev) => {
-        const stream = ev.streams[0] ?? new MediaStream([ev.track])
+      pc.ontrack = (event) => {
+        const stream = event.streams[0] ?? new MediaStream([event.track])
         updateRemote(remoteId, stream)
       }
 
@@ -277,28 +327,32 @@ export function MediaDock({
     if (!inCall || !localStream) return
 
     const onSnapshot = async (msg: {
-      peers: { peerId: string; displayName: string; avatarUrl?: string | null }[]
+      peers: { peerId: string; displayName: string; avatarUrl?: string | null; frameColor?: string | null }[]
     }) => {
       const stream = localStreamRef.current
       if (!stream) return
-      for (const p of msg.peers) {
-        labelsRef.current.set(p.peerId, p.displayName)
+      for (const peer of msg.peers) {
+        labelsRef.current.set(peer.peerId, peer.displayName)
         avatarsRef.current.set(
-          p.peerId,
-          typeof p.avatarUrl === 'string' && p.avatarUrl.length > 0 ? p.avatarUrl : null,
+          peer.peerId,
+          typeof peer.avatarUrl === 'string' && peer.avatarUrl.length > 0 ? peer.avatarUrl : null,
+        )
+        frameColorsRef.current.set(
+          peer.peerId,
+          typeof peer.frameColor === 'string' && peer.frameColor.length > 0 ? peer.frameColor : null,
         )
         try {
-          const pc = getOrCreatePc(p.peerId)
+          const pc = getOrCreatePc(peer.peerId)
           const senders = pc.getSenders()
-          for (const t of stream.getTracks()) {
-            if (!senders.some((s) => s.track === t)) {
-              pc.addTrack(t, stream)
+          for (const track of stream.getTracks()) {
+            if (!senders.some((sender) => sender.track === track)) {
+              pc.addTrack(track, stream)
             }
           }
           const offer = await pc.createOffer()
           await pc.setLocalDescription(offer)
           socket.emit('webrtcSignal', {
-            targetId: p.peerId,
+            targetId: peer.peerId,
             payload: { type: 'offer', sdp: offer.sdp! },
           })
         } catch {
@@ -313,11 +367,33 @@ export function MediaDock({
       peerId: string
       displayName: string
       avatarUrl?: string | null
+      frameColor?: string | null
     }) => {
       labelsRef.current.set(msg.peerId, msg.displayName)
       avatarsRef.current.set(
         msg.peerId,
         typeof msg.avatarUrl === 'string' && msg.avatarUrl.length > 0 ? msg.avatarUrl : null,
+      )
+      frameColorsRef.current.set(
+        msg.peerId,
+        typeof msg.frameColor === 'string' && msg.frameColor.length > 0 ? msg.frameColor : null,
+      )
+    }
+
+    const onPeerUpdated = (msg: {
+      peerId: string
+      displayName: string
+      avatarUrl?: string | null
+      frameColor?: string | null
+    }) => {
+      labelsRef.current.set(msg.peerId, msg.displayName)
+      avatarsRef.current.set(
+        msg.peerId,
+        typeof msg.avatarUrl === 'string' && msg.avatarUrl.length > 0 ? msg.avatarUrl : null,
+      )
+      frameColorsRef.current.set(
+        msg.peerId,
+        typeof msg.frameColor === 'string' && msg.frameColor.length > 0 ? msg.frameColor : null,
       )
       setRemotes((prev) => {
         if (!prev[msg.peerId]) return prev
@@ -328,6 +404,8 @@ export function MediaDock({
             label: msg.displayName,
             avatarUrl:
               typeof msg.avatarUrl === 'string' && msg.avatarUrl.length > 0 ? msg.avatarUrl : null,
+            frameColor:
+              typeof msg.frameColor === 'string' && msg.frameColor.length > 0 ? msg.frameColor : null,
           },
         }
       })
@@ -342,6 +420,7 @@ export function MediaDock({
       iceBufRef.current.delete(msg.peerId)
       labelsRef.current.delete(msg.peerId)
       avatarsRef.current.delete(msg.peerId)
+      frameColorsRef.current.delete(msg.peerId)
       removeRemote(msg.peerId)
     }
 
@@ -369,16 +448,13 @@ export function MediaDock({
         try {
           const pc = getOrCreatePc(fromId)
           if (pc.remoteDescription) return
-
           await pc.setRemoteDescription({ type: 'offer', sdp: raw.sdp })
           flushIce(fromId, pc)
-
-          for (const t of stream.getTracks()) {
-            if (!pc.getSenders().some((s) => s.track === t)) {
-              pc.addTrack(t, stream)
+          for (const track of stream.getTracks()) {
+            if (!pc.getSenders().some((sender) => sender.track === track)) {
+              pc.addTrack(track, stream)
             }
           }
-
           const answer = await pc.createAnswer()
           await pc.setLocalDescription(answer)
           flushIce(fromId, pc)
@@ -412,13 +488,14 @@ export function MediaDock({
 
     const onDisconnect = () => {
       setMediaErr('Se cortó la conexión; la llamada se cerró.')
-      localStreamRef.current?.getTracks().forEach((t) => t.stop())
+      localStreamRef.current?.getTracks().forEach((track) => track.stop())
       setLocalStream(null)
       setInCall(false)
     }
 
     socket.on('mediaPeersSnapshot', onSnapshot)
     socket.on('mediaPeerJoined', onPeerJoined)
+    socket.on('mediaPeerUpdated', onPeerUpdated)
     socket.on('mediaPeerLeft', onPeerLeft)
     socket.on('webrtcSignal', onSignal)
     socket.on('mediaError', onMediaErr)
@@ -427,20 +504,31 @@ export function MediaDock({
     socket.emit('mediaJoin', {
       displayName: labelRef.current,
       avatarUrl: avatarRef.current,
+      frameColor: frameColorRef.current,
     })
 
     return () => {
       socket.off('mediaPeersSnapshot', onSnapshot)
       socket.off('mediaPeerJoined', onPeerJoined)
+      socket.off('mediaPeerUpdated', onPeerUpdated)
       socket.off('mediaPeerLeft', onPeerLeft)
       socket.off('webrtcSignal', onSignal)
       socket.off('mediaError', onMediaErr)
       socket.off('disconnect', onDisconnect)
       if (socket.connected) socket.emit('mediaLeave')
       closeAllPeers()
-      localStreamRef.current?.getTracks().forEach((t) => t.stop())
+      localStreamRef.current?.getTracks().forEach((track) => track.stop())
     }
   }, [closeAllPeers, flushIce, getOrCreatePc, inCall, localStream, removeRemote, socket])
+
+  useEffect(() => {
+    if (!socket || !socket.connected || !inCall) return
+    socket.emit('mediaJoin', {
+      displayName: label,
+      avatarUrl,
+      frameColor,
+    })
+  }, [avatarUrl, frameColor, inCall, label, socket])
 
   const joinCall = useCallback(async () => {
     setMediaErr(null)
@@ -453,10 +541,7 @@ export function MediaDock({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-        },
+        audio: { echoCancellation: true, noiseSuppression: true },
       })
       setLocalStream(stream)
       setMicOn(true)
@@ -470,7 +555,7 @@ export function MediaDock({
   }, [])
 
   const leaveCall = useCallback(() => {
-    localStreamRef.current?.getTracks().forEach((t) => t.stop())
+    localStreamRef.current?.getTracks().forEach((track) => track.stop())
     setLocalStream(null)
     setInCall(false)
     setMediaErr(null)
@@ -478,16 +563,12 @@ export function MediaDock({
 
   useEffect(() => {
     if (!localStream) return
-    for (const t of localStream.getAudioTracks()) {
-      t.enabled = micOn
-    }
+    for (const track of localStream.getAudioTracks()) track.enabled = micOn
   }, [localStream, micOn])
 
   useEffect(() => {
     if (!localStream) return
-    for (const t of localStream.getVideoTracks()) {
-      t.enabled = camOn
-    }
+    for (const track of localStream.getVideoTracks()) track.enabled = camOn
   }, [camOn, localStream])
 
   const remoteEntries = Object.entries(remotes)
@@ -503,38 +584,34 @@ export function MediaDock({
     const local = {
       id: 'local',
       label,
-      isDm: session.role === 'dm',
+      isNarrator: session.role === 'dm',
       stream: localStream,
       muted: true,
       avatarUrl,
+      frameColor,
     }
-    const rem = remoteEntries.map(
-      ([id, { label: remoteLabel, stream, avatarUrl: remoteAvatar }]) => ({
-        id,
-        label: remoteLabel,
-        isDm: remoteLabel.trim().toLowerCase() === 'dm',
-        stream,
-        muted: false,
-        avatarUrl: remoteAvatar,
-      }),
-    )
-    const all = [local, ...rem]
+    const remotesList = remoteEntries.map(([id, remote]) => ({
+      id,
+      label: remote.label,
+      isNarrator: isNarratorLabel(remote.label),
+      stream: remote.stream,
+      muted: false,
+      avatarUrl: remote.avatarUrl,
+      frameColor: remote.frameColor,
+    }))
+    const all = [local, ...remotesList]
     all.sort((a, b) => {
-      if (a.isDm && !b.isDm) return -1
-      if (!a.isDm && b.isDm) return 1
+      if (a.isNarrator && !b.isNarrator) return -1
+      if (!a.isNarrator && b.isNarrator) return 1
       if (a.id === 'local') return -1
       if (b.id === 'local') return 1
       return a.label.localeCompare(b.label)
     })
     return { all }
-  }, [inCall, label, avatarUrl, localStream, remoteEntries, session.role])
+  }, [avatarUrl, frameColor, inCall, label, localStream, remoteEntries, session.role])
 
   const toolbar = (
-    <div
-      className="flex flex-wrap items-center justify-center gap-2"
-      role="toolbar"
-      aria-label="Controles de llamada"
-    >
+    <div className="flex flex-wrap items-center justify-center gap-2" role="toolbar" aria-label="Controles de llamada">
       {!inCall ? (
         <MediaIconBtn
           label="Unirse con audio y vídeo"
@@ -549,28 +626,20 @@ export function MediaDock({
           <MediaIconBtn
             label={micOn ? 'Silenciar micrófono' : 'Activar micrófono'}
             title={micOn ? 'Silenciar micrófono' : 'Activar micrófono'}
-            onClick={() => setMicOn((v) => !v)}
+            onClick={() => setMicOn((value) => !value)}
             pressed={micOn}
             off={!micOn}
           >
-            {micOn ? (
-              <IconMicOn className="size-[1.05rem]" />
-            ) : (
-              <IconMicOff className="size-[1.05rem]" />
-            )}
+            {micOn ? <IconMicOn className="size-[1.05rem]" /> : <IconMicOff className="size-[1.05rem]" />}
           </MediaIconBtn>
           <MediaIconBtn
             label={camOn ? 'Apagar cámara' : 'Encender cámara'}
             title={camOn ? 'Apagar cámara' : 'Encender cámara'}
-            onClick={() => setCamOn((v) => !v)}
+            onClick={() => setCamOn((value) => !value)}
             pressed={camOn}
             off={!camOn}
           >
-            {camOn ? (
-              <IconCamOn className="size-[1.05rem]" />
-            ) : (
-              <IconCamOff className="size-[1.05rem]" />
-            )}
+            {camOn ? <IconCamOn className="size-[1.05rem]" /> : <IconCamOff className="size-[1.05rem]" />}
           </MediaIconBtn>
           <MediaIconBtn
             label="Colgar y salir de la llamada"
@@ -587,24 +656,26 @@ export function MediaDock({
 
   const filmstrip =
     inCall && localStream ? (
-      <div
-        className={`vtt-media-filmstrip flex gap-2 ${compact ? 'overflow-x-auto pb-1 pt-1' : 'flex-wrap justify-center py-2'}`}
-      >
+      <div className={`vtt-media-filmstrip flex gap-2 ${compact ? 'overflow-x-auto pb-1 pt-1' : 'flex-wrap justify-center py-2'}`}>
         <VideoThumb
           stream={localStream}
           name={`Tú · ${label}`}
           avatarUrl={avatarUrl}
+          frameColor={frameColor}
           muted
           compact={compact}
           handRaised={localHandRaised}
+          isNarrator={session.role === 'dm'}
         />
-        {remoteEntries.map(([peerId, { stream, label: remoteLabel, avatarUrl: remoteAvatar }]) => (
+        {remoteEntries.map(([peerId, remote]) => (
           <VideoThumb
             key={peerId}
-            stream={stream}
-            name={remoteLabel}
-            avatarUrl={remoteAvatar}
+            stream={remote.stream}
+            name={remote.label}
+            avatarUrl={remote.avatarUrl}
+            frameColor={remote.frameColor}
             compact={compact}
+            isNarrator={isNarratorLabel(remote.label)}
           />
         ))}
       </div>
@@ -623,60 +694,56 @@ export function MediaDock({
     return (
       <div className="pointer-events-none fixed inset-0 z-[86]" aria-label="Mesa de voz y cámara">
         {mediaErr ? (
-          <p
-            role="alert"
-            className="pointer-events-auto absolute left-1/2 top-3 z-[87] -translate-x-1/2 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-danger-border)] bg-[var(--vtt-danger-bg)] px-3 py-1.5 text-xs text-[var(--vtt-danger-text)]"
-          >
+          <p role="alert" className="pointer-events-auto absolute left-1/2 top-3 z-[87] -translate-x-1/2 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-danger-border)] bg-[var(--vtt-danger-bg)] px-3 py-1.5 text-xs text-[var(--vtt-danger-text)]">
             {mediaErr}
           </p>
         ) : null}
 
         {mapParticipants?.all ? (() => {
-          const dmParticipants = mapParticipants.all.filter(p => p.isDm)
-          const playerParticipants = mapParticipants.all.filter(p => !p.isDm)
-
+          const narratorParticipants = mapParticipants.all.filter((participant) => participant.isNarrator)
+          const playerParticipants = mapParticipants.all.filter((participant) => !participant.isNarrator)
           return (
             <>
-              {dmParticipants.length > 0 && (
-                <div className="pointer-events-auto absolute top-3 left-1/2 -translate-x-1/2 z-[86] flex flex-row gap-3">
-                  {dmParticipants.map((p) => (
+              {narratorParticipants.length > 0 ? (
+                <div className="pointer-events-auto absolute left-1/2 top-3 z-[86] flex -translate-x-1/2 flex-row gap-3">
+                  {narratorParticipants.map((participant) => (
                     <VideoThumb
-                      key={p.id}
-                      stream={p.stream}
-                      name={p.label}
-                      avatarUrl={p.avatarUrl}
-                      muted={p.muted}
+                      key={participant.id}
+                      stream={participant.stream}
+                      name={participant.label}
+                      avatarUrl={participant.avatarUrl}
+                      frameColor={participant.frameColor}
+                      muted={participant.muted}
                       compact
                       featured
-                      handRaised={p.id === 'local' ? localHandRaised : false}
+                      handRaised={participant.id === 'local' ? localHandRaised : false}
+                      isNarrator
                     />
                   ))}
                 </div>
-              )}
-              {playerParticipants.length > 0 && (
-                <div className="pointer-events-auto absolute left-3 top-20 bottom-24 z-[86] flex flex-col gap-3 overflow-y-auto w-[min(100%,11rem)] xl:w-[12rem] hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                  {playerParticipants.map((p) => (
+              ) : null}
+              {playerParticipants.length > 0 ? (
+                <div className="pointer-events-auto absolute bottom-24 left-3 top-20 z-[86] flex w-[min(100%,11rem)] flex-col gap-3 overflow-y-auto xl:w-[12rem] hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {playerParticipants.map((participant) => (
                     <VideoThumb
-                      key={p.id}
-                      stream={p.stream}
-                      name={p.label}
-                      avatarUrl={p.avatarUrl}
-                      muted={p.muted}
+                      key={participant.id}
+                      stream={participant.stream}
+                      name={participant.label}
+                      avatarUrl={participant.avatarUrl}
+                      frameColor={participant.frameColor}
+                      muted={participant.muted}
                       compact
                       featured={false}
-                      handRaised={p.id === 'local' ? localHandRaised : false}
+                      handRaised={participant.id === 'local' ? localHandRaised : false}
                     />
                   ))}
                 </div>
-              )}
+              ) : null}
             </>
           )
         })() : null}
 
-        <div
-          className="vtt-media-dock-map-shell pointer-events-auto absolute bottom-0 left-1/2 z-[87] w-[min(20rem,calc(100vw-1rem))] -translate-x-1/2 rounded-t-[var(--vtt-radius)] px-2 py-2"
-          style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 0px))' }}
-        >
+        <div className="vtt-media-dock-map-shell pointer-events-auto absolute bottom-0 left-1/2 z-[87] w-[min(20rem,calc(100vw-1rem))] -translate-x-1/2 rounded-t-[var(--vtt-radius)] px-2 py-2" style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 0px))' }}>
           <PresenceStrip
             socket={socket}
             roomState={roomState}
@@ -692,10 +759,7 @@ export function MediaDock({
   }
 
   return (
-    <section
-      className="vtt-surface vtt-glow-border w-full shrink-0 overflow-hidden p-4"
-      aria-label="Llamada de mesa (audio y vídeo)"
-    >
+    <section className="vtt-surface vtt-glow-border w-full shrink-0 overflow-hidden p-4" aria-label="Llamada de mesa (audio y vídeo)">
       <div className="flex flex-col gap-1 border-b border-[var(--vtt-border-subtle)] pb-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="font-vtt-display text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-[var(--vtt-gold)]">
@@ -717,7 +781,6 @@ export function MediaDock({
       />
 
       {errBlock}
-
       {filmstrip ? <div className="-mx-1 mt-2">{filmstrip}</div> : null}
     </section>
   )

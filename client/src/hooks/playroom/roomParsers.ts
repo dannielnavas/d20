@@ -6,8 +6,11 @@ import type {
   RoomState,
   Scene,
   SceneMapSettings,
+  Token,
 } from '../../types/room'
 import type { SessionState } from '../../types/session'
+
+const DEFAULT_TOKEN_FRAME_COLOR = '#b48a3c'
 
 export type TokenPosEvent = { tokenId: string; x: number; y: number }
 
@@ -145,6 +148,56 @@ function normalizeChatMessage(raw: unknown): ChatMessage | null {
   }
 }
 
+function normalizeToken(raw: unknown): Token | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const token = raw as Record<string, unknown>
+  if (
+    typeof token.id !== 'string' ||
+    typeof token.name !== 'string' ||
+    typeof token.img !== 'string' ||
+    typeof token.x !== 'number' ||
+    typeof token.y !== 'number' ||
+    typeof token.size !== 'number' ||
+    (token.type !== 'pc' && token.type !== 'npc')
+  ) {
+    return null
+  }
+  const hitPointsMax =
+    typeof token.hitPointsMax === 'number' && Number.isFinite(token.hitPointsMax)
+      ? Math.max(0, Math.round(token.hitPointsMax))
+      : 0
+  const hitPointsCurrent =
+    typeof token.hitPointsCurrent === 'number' && Number.isFinite(token.hitPointsCurrent)
+      ? Math.max(0, Math.min(Math.round(token.hitPointsCurrent), hitPointsMax))
+      : hitPointsMax
+  const hitPointsTemp =
+    typeof token.hitPointsTemp === 'number' && Number.isFinite(token.hitPointsTemp)
+      ? Math.max(0, Math.round(token.hitPointsTemp))
+      : 0
+  return {
+    id: token.id,
+    name: token.name,
+    img: token.img,
+    frameColor:
+      typeof token.frameColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(token.frameColor)
+        ? token.frameColor.toLowerCase()
+        : DEFAULT_TOKEN_FRAME_COLOR,
+    x: token.x,
+    y: token.y,
+    size: token.size,
+    type: token.type,
+    ownerSocket: typeof token.ownerSocket === 'string' ? token.ownerSocket : null,
+    claimedBy: typeof token.claimedBy === 'string' ? token.claimedBy : null,
+    hitPointsCurrent,
+    hitPointsMax,
+    hitPointsTemp,
+    conditions: Array.isArray(token.conditions)
+      ? token.conditions.filter((value): value is string => typeof value === 'string')
+      : [],
+    onMap: token.onMap === false ? false : true,
+  }
+}
+
 export function parseSessionState(payload: unknown): SessionState | null {
   if (typeof payload !== 'object' || payload === null) return null
   const o = payload as Record<string, unknown>
@@ -221,6 +274,7 @@ export function normalizeRoomState(payload: RoomState): RoomState {
   for (const sc of scenes) {
     if (!sc.settings) sc.settings = defaultSceneMapSettings()
     if (!Array.isArray(sc.tokens)) sc.tokens = []
+    sc.tokens = sc.tokens.map((token) => normalizeToken(token)).filter((token): token is Token => token !== null)
   }
 
   const active =

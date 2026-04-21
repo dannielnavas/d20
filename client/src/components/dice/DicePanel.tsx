@@ -137,7 +137,7 @@ export function DicePanel({
               className="mt-0.5 size-4 shrink-0 rounded border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] text-[var(--vtt-gold)]"
             />
             <span>
-              Tirada oculta: solo el director ve el resultado en la mesa
+              Tirada oculta: solo el Narrador ve el resultado en la mesa
               {!isDm ? ' (tú también ves tu tirada).' : '.'}
             </span>
           </label>
@@ -149,7 +149,7 @@ export function DicePanel({
           {!isDm && canRequestRoll ? (
             <div className="mt-3 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface-warm)]/80 p-2">
               <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]">
-                Pedir permiso al director
+                Pedir permiso al Narrador
               </p>
               <label className="mt-2 block text-xs text-[var(--vtt-text-muted)]">
                 Motivo
@@ -164,8 +164,8 @@ export function DicePanel({
                 />
               </label>
               <p className="mt-1 text-[0.65rem] text-[var(--vtt-text-muted)]">
-                Se usa el dado y modo seleccionados arriba. El DM verá la petición y puede aprobarla
-                o ignorarla.
+                Se usa el dado y modo seleccionados arriba. El Narrador verá la petición y puede
+                aprobarla o ignorarla.
               </p>
               <button
                 type="button"

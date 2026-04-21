@@ -324,7 +324,7 @@ export function MapBoard({
   return (
     <section
       className="flex min-h-0 w-full flex-1 flex-col gap-4"
-      aria-label={isDm ? 'Tablero del director de juego' : 'Tablero de juego'}
+      aria-label={isDm ? 'Tablero del Narrador' : 'Tablero de juego'}
     >
       {isDm ? <DmScreenNav value={dmScreen} onChange={setDmScreen} /> : null}
 
@@ -454,7 +454,7 @@ export function MapBoard({
                         <p className="max-w-sm px-4 text-xs leading-relaxed text-[var(--vtt-text-muted)]">
                           {isDm
                             ? 'En la pestaña «Mapa» puedes poner imagen, vídeo o YouTube; aquí verás el tablero en vivo.'
-                            : 'Cuando el director cargue el mapa y coloque personajes, verás la mesa aquí.'}
+                            : 'Cuando el Narrador cargue el mapa y coloque personajes, verás la mesa aquí.'}
                         </p>
                         <div
                           className="absolute inset-0 opacity-[0.14]"

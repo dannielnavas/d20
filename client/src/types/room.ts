@@ -6,12 +6,16 @@ export type Token = {
   id: string
   name: string
   img: string
+  frameColor?: string
   x: number
   y: number
   size: number
   type: TokenType
   ownerSocket: string | null
   claimedBy: string | null
+  hitPointsCurrent?: number
+  hitPointsMax?: number
+  hitPointsTemp?: number
   /** Etiquetas de estado (ej. envenenado); máx. 6 en servidor */
   conditions?: string[]
   /** Solo PNJ: false = reserva, no visible en mapa. */

@@ -164,7 +164,7 @@ export function DmHudColumn({
     <>
       <div
         className="fixed right-3 top-[5.5rem] z-[89] flex w-[min(22rem,calc(100vw-1.5rem))] max-h-[calc(100svh-5.25rem)] flex-col gap-2 overflow-y-auto pb-2 [scrollbar-gutter:stable] sm:top-24"
-        aria-label="Herramientas del director"
+        aria-label="Herramientas del Narrador"
       >
         <div className="sticky top-0 z-[1] flex shrink-0 items-center justify-between gap-2 bg-[var(--vtt-bg)]/80 pb-1 backdrop-blur-sm">
           {clearDone ? (
@@ -295,7 +295,7 @@ export function DmHudColumn({
               id={dialogTitleId}
               className="font-vtt-display text-sm font-semibold tracking-wide text-[var(--vtt-gold)]"
             >
-              Herramientas del director
+              Herramientas del Narrador
             </h2>
             <p className="mt-2 text-xs leading-relaxed text-[var(--vtt-text-muted)]">
               Activa o quita bloques y cambia el orden en la columna derecha (temporizador, audio

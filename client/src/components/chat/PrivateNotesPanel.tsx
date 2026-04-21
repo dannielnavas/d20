@@ -98,7 +98,7 @@ function PlayerPrivateNotes({
   return (
     <section
       className={shellClass}
-      aria-label="Notas privadas con el director de juego"
+      aria-label="Notas privadas con el Narrador"
     >
       {showInnerHeader ? (
         <button
@@ -107,7 +107,7 @@ function PlayerPrivateNotes({
           onClick={onToggleExpand}
           aria-expanded={expanded}
         >
-          Notas privadas (DM)
+          Notas privadas (Narrador)
           <span className="text-[var(--vtt-text-muted)]">{expanded ? '−' : '+'}</span>
         </button>
       ) : null}
@@ -116,7 +116,7 @@ function PlayerPrivateNotes({
           {dmText ? (
             <div className="relative rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface-warm)]/50 p-3">
               <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-gold)]">
-                Mensaje del Director
+                Mensaje del Narrador
               </p>
               <p className="whitespace-pre-wrap text-sm text-[var(--vtt-text)]">
                 {dmText}
@@ -128,7 +128,7 @@ function PlayerPrivateNotes({
               htmlFor="vtt-private-to-dm"
               className="mt-1 block text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]"
             >
-              {dmText ? 'Tu respuesta' : 'Mensaje para el director'}
+              {dmText ? 'Tu respuesta' : 'Mensaje para el Narrador'}
             </label>
             <textarea
               id="vtt-private-to-dm"
@@ -137,7 +137,7 @@ function PlayerPrivateNotes({
               rows={4}
               maxLength={6000}
               className="vtt-input min-h-[5rem] w-full resize-y text-sm"
-              placeholder="Escribe algo que solo verá el director…"
+              placeholder="Escribe algo que solo verá el Narrador…"
             />
           </div>
           <button type="button" className={`vtt-btn-primary w-full text-xs transition-colors ${feedback ? 'bg-[var(--vtt-forest)] text-white !border-[var(--vtt-forest)]' : ''}`} onClick={savePlayer}>

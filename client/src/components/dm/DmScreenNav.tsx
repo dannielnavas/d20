@@ -15,7 +15,7 @@ export function DmScreenNav({ value, onChange }: DmScreenNavProps) {
   return (
     <nav
       className="dm-screen-nav relative w-full overflow-hidden rounded-[var(--vtt-radius)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-surface)] p-1 shadow-[var(--dm-panel-shadow)]"
-      aria-label="Secciones del director de juego"
+      aria-label="Secciones del Narrador"
     >
       <div
         className="pointer-events-none absolute inset-y-2 left-2 w-px bg-gradient-to-b from-transparent via-[var(--vtt-gold-dim)] to-transparent opacity-40"

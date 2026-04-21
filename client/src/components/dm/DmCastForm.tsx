@@ -99,8 +99,8 @@ export function DmCastForm({ socket, getSpawnCenter, className = '' }: DmCastFor
           Añadir PNJ
         </legend>
         <p className="mt-3 text-xs text-[var(--vtt-text-muted)]">
-          Monstruos, aliados o figuras que solo mueve el DM. La reserva evita llenar el mapa hasta
-          que actives cada PNJ.
+          Monstruos, aliados o figuras que solo mueve el Narrador. La reserva evita llenar el mapa
+          hasta que actives cada PNJ.
         </p>
         <div className="mt-4 flex flex-col gap-3">
           <div>
