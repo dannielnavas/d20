@@ -1,19 +1,19 @@
 import { useCallback, useId, useMemo, useState } from 'react'
 import type { Socket } from 'socket.io-client'
-import type { RoomState, Token } from '../../types/room'
+import { type DmHudToolId, useDmHudPreferences } from '../../hooks/useDmHudPreferences'
 import type { PrivateNotesPair } from '../../types/private-notes'
+import type { RoomState, Token } from '../../types/room'
 import { ChatPanel } from '../chat/ChatPanel'
 import { PrivateNotesPanel } from '../chat/PrivateNotesPanel'
 import { DicePanel } from '../dice/DicePanel'
+import { InitiativePanel } from '../initiative/InitiativePanel'
+import { PollStartModal } from '../poll/PollStartModal'
+import { ScreenReactionPalette } from '../reactions/ScreenReactionPalette'
+import { ImageRevealTool } from '../reveal/ImageRevealTool'
 import { DmTurnTimerBar } from '../timer/DmTurnTimerBar'
-import { type DmHudToolId, useDmHudPreferences } from '../../hooks/useDmHudPreferences'
+import { DmCollapsibleCard } from './DmCollapsibleCard'
 import { MapDmVideoAudioCard } from './MapDmVideoAudioCard'
 import { RollRequestInbox } from './RollRequestInbox'
-import { ImageRevealTool } from '../reveal/ImageRevealTool'
-import { DmCollapsibleCard } from './DmCollapsibleCard'
-import { PollStartModal } from '../poll/PollStartModal'
-import { InitiativePanel } from '../initiative/InitiativePanel'
-import { ScreenReactionPalette } from '../reactions/ScreenReactionPalette'
 
 export type DmHudColumnProps = {
   roomId: string
@@ -68,7 +68,9 @@ export function DmHudColumn({
       setClearConfirm(false)
       setTimeout(() => setClearDone(false), 3000)
     })
-    return () => { socket.off('snapshotCleared') }
+    return () => {
+      socket.off('snapshotCleared')
+    }
   }, [socket])()
 
   const chatBadge = useMemo(() => {
@@ -168,14 +170,19 @@ export function DmHudColumn({
       >
         <div className="sticky top-0 z-[1] flex shrink-0 items-center justify-between gap-2 bg-[var(--vtt-bg)]/80 pb-1 backdrop-blur-sm">
           {clearDone ? (
-            <span className="text-[0.65rem] font-semibold text-[var(--vtt-forest)]">✓ Caché borrada</span>
+            <span className="text-[0.65rem] font-semibold text-[var(--vtt-forest)]">
+              ✓ Caché borrada
+            </span>
           ) : clearConfirm ? (
             <span className="flex items-center gap-1.5">
               <span className="text-[0.65rem] text-[var(--vtt-danger-text)]">¿Confirmar?</span>
               <button
                 type="button"
                 className="rounded border border-[var(--vtt-danger-border)] px-2 py-0.5 text-[0.65rem] font-semibold text-[var(--vtt-danger-text)] hover:bg-[var(--vtt-danger-bg)]"
-                onClick={() => { socket.emit('clearSessionSnapshot'); setClearConfirm(false) }}
+                onClick={() => {
+                  socket.emit('clearSessionSnapshot')
+                  setClearConfirm(false)
+                }}
               >
                 Sí, borrar
               </button>

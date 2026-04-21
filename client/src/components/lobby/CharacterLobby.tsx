@@ -156,7 +156,11 @@ export function CharacterLobby({ roomId, pcs, claimingId, onClaim }: CharacterLo
                           min={0}
                           className="vtt-input mt-1 text-sm"
                           value={draft.hitPointsCurrent}
-                          onChange={(e) => updateDraft(pc, { hitPointsCurrent: Math.max(0, Number(e.target.value) || 0) })}
+                          onChange={(e) =>
+                            updateDraft(pc, {
+                              hitPointsCurrent: Math.max(0, Number(e.target.value) || 0),
+                            })
+                          }
                         />
                       </label>
                       <label className="text-[0.72rem] text-[var(--vtt-text-muted)]">
@@ -166,7 +170,11 @@ export function CharacterLobby({ roomId, pcs, claimingId, onClaim }: CharacterLo
                           min={0}
                           className="vtt-input mt-1 text-sm"
                           value={draft.hitPointsMax}
-                          onChange={(e) => updateDraft(pc, { hitPointsMax: Math.max(0, Number(e.target.value) || 0) })}
+                          onChange={(e) =>
+                            updateDraft(pc, {
+                              hitPointsMax: Math.max(0, Number(e.target.value) || 0),
+                            })
+                          }
                         />
                       </label>
                       <label className="text-[0.72rem] text-[var(--vtt-text-muted)]">
@@ -176,7 +184,11 @@ export function CharacterLobby({ roomId, pcs, claimingId, onClaim }: CharacterLo
                           min={0}
                           className="vtt-input mt-1 text-sm"
                           value={draft.hitPointsTemp}
-                          onChange={(e) => updateDraft(pc, { hitPointsTemp: Math.max(0, Number(e.target.value) || 0) })}
+                          onChange={(e) =>
+                            updateDraft(pc, {
+                              hitPointsTemp: Math.max(0, Number(e.target.value) || 0),
+                            })
+                          }
                         />
                       </label>
                     </div>

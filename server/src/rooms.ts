@@ -1,5 +1,5 @@
-import { createEmptyRoom, type RoomState, type Token } from './types.js'
 import { getActiveScene, migrateRoomToScenes } from './scene-helpers.js'
+import { createEmptyRoom, type RoomState, type Token } from './types.js'
 
 const rooms = new Map<string, RoomState>()
 const DEFAULT_TOKEN_FRAME_COLOR = '#b48a3c'
@@ -21,7 +21,10 @@ function normalizeTokenShape(token: Token): void {
     token.hitPointsTemp = 0
   }
   token.hitPointsMax = Math.max(0, Math.round(token.hitPointsMax))
-  token.hitPointsCurrent = Math.max(0, Math.min(Math.round(token.hitPointsCurrent), token.hitPointsMax))
+  token.hitPointsCurrent = Math.max(
+    0,
+    Math.min(Math.round(token.hitPointsCurrent), token.hitPointsMax),
+  )
   token.hitPointsTemp = Math.max(0, Math.round(token.hitPointsTemp))
 }
 

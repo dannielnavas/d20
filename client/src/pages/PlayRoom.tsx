@@ -1,28 +1,28 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { CharacterLobby } from '../components/lobby/CharacterLobby'
 import { MapBoard } from '../components/board/MapBoard'
-import { GroupPollPanel } from '../components/poll/GroupPollPanel'
-import { InitiativePanel } from '../components/initiative/InitiativePanel'
-import { MediaDock } from '../components/media/MediaDock'
-import { DicePanel } from '../components/dice/DicePanel'
-import { ThemeToggle } from '../components/ThemeToggle'
 import { ChatPanel } from '../components/chat/ChatPanel'
 import { PrivateNotesPanel } from '../components/chat/PrivateNotesPanel'
+import { DicePanel } from '../components/dice/DicePanel'
 import { DmHudColumn } from '../components/dm/DmHudColumn'
+import { InitiativePanel } from '../components/initiative/InitiativePanel'
+import type { CharacterClaimCustomization } from '../components/lobby/CharacterLobby'
+import { CharacterLobby } from '../components/lobby/CharacterLobby'
+import { MediaDock } from '../components/media/MediaDock'
 import { PlayerHudColumn } from '../components/player/PlayerHudColumn'
+import { GroupPollPanel } from '../components/poll/GroupPollPanel'
 import { ScreenReactionOverlay } from '../components/reactions/ScreenReactionOverlay'
 import { ImageRevealModal } from '../components/reveal/ImageRevealModal'
+import { ThemeToggle } from '../components/ThemeToggle'
 import { TurnTimerHud } from '../components/timer/TurnTimerHud'
-import { usePlayerSessionId } from '../hooks/usePlayerSessionId'
 import { D20_ROLL_GIF, sessionPwdStorageKey } from '../hooks/playroom/constants'
 import { useChatMentionNotify } from '../hooks/playroom/useChatMentionNotify'
-import { useInitiativeTurnNotify } from '../hooks/playroom/useInitiativeTurnNotify'
 import { useDmTokenExchange } from '../hooks/playroom/useDmTokenExchange'
+import { useInitiativeTurnNotify } from '../hooks/playroom/useInitiativeTurnNotify'
 import { usePlayRoomSocket } from '../hooks/playroom/usePlayRoomSocket'
 import { useRollFx } from '../hooks/playroom/useRollFx'
+import { usePlayerSessionId } from '../hooks/usePlayerSessionId'
 import type { Token } from '../types/room'
-import type { CharacterClaimCustomization } from '../components/lobby/CharacterLobby'
 import { allPlayerCharacters, findTokenInRoomState } from '../utils/roomTokens'
 
 export function PlayRoom() {
@@ -221,7 +221,9 @@ export function PlayRoom() {
 
   const pcs = state ? allPlayerCharacters(state) : []
   const currentPlayerToken =
-    state && session?.claimedTokenId ? findTokenInRoomState(state, session.claimedTokenId) ?? null : null
+    state && session?.claimedTokenId
+      ? (findTokenInRoomState(state, session.claimedTokenId) ?? null)
+      : null
   const canUseDicePanel = Boolean(
     socket &&
     state &&
@@ -397,8 +399,8 @@ export function PlayRoom() {
                 Contraseña de la mesa
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-[var(--vtt-text-muted)]">
-                El Narrador ha protegido esta mesa. Escribe la misma contraseña que compartió con
-                el grupo (no es la clave privada del Narrador).
+                El Narrador ha protegido esta mesa. Escribe la misma contraseña que compartió con el
+                grupo (no es la clave privada del Narrador).
               </p>
               <div className="mt-5 flex flex-col gap-3">
                 <label
@@ -506,16 +508,16 @@ export function PlayRoom() {
 
         {showMap && state && socket && session?.role === 'player' && playerSessionId ? (
           <PlayerHudColumn
-             roomId={roomId}
-             socket={socket}
-             roomState={state}
-             privateNotesPlayerPair={privateNotesPlayerPair}
-             chatExpanded={chatExpanded}
-             onChatExpandedChange={setChatExpanded}
-             initiativeTokens={allPlayerCharacters(state)}
-             playerSessionId={playerSessionId}
-             canRequestRoll={Boolean(session.claimedTokenId)}
-             currentToken={currentPlayerToken}
+            roomId={roomId}
+            socket={socket}
+            roomState={state}
+            privateNotesPlayerPair={privateNotesPlayerPair}
+            chatExpanded={chatExpanded}
+            onChatExpandedChange={setChatExpanded}
+            initiativeTokens={allPlayerCharacters(state)}
+            playerSessionId={playerSessionId}
+            canRequestRoll={Boolean(session.claimedTokenId)}
+            currentToken={currentPlayerToken}
           />
         ) : null}
 
@@ -638,7 +640,12 @@ export function PlayRoom() {
           />
         ) : null}
 
-        {socket && state && session?.role === 'player' && playerSessionId && !showMap && showLobby ? (
+        {socket &&
+        state &&
+        session?.role === 'player' &&
+        playerSessionId &&
+        !showMap &&
+        showLobby ? (
           <PrivateNotesPanel
             variant="player"
             socket={socket}

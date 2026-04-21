@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useId, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import type { Socket } from 'socket.io-client'
-import type { Token } from '../../types/room'
 import { DEFAULT_TOKEN_FRAME_COLOR, TOKEN_FRAME_COLORS } from '../../config/tokenFrameColors'
+import type { Token } from '../../types/room'
 import {
   DD_TOKEN_SIZE_LABELS,
   DD_TOKEN_SIZE_MULTIPLIERS,
@@ -201,7 +201,17 @@ function TokenRosterRow({
       hitPointsTemp: Math.max(0, editHpTemp),
     })
     setEditing(false)
-  }, [socket, t.id, t.name, editName, editImg, editFrameColor, editHpCurrent, editHpMax, editHpTemp])
+  }, [
+    socket,
+    t.id,
+    t.name,
+    editName,
+    editImg,
+    editFrameColor,
+    editHpCurrent,
+    editHpMax,
+    editHpTemp,
+  ])
 
   const doDelete = useCallback(() => {
     if (!socket) return
@@ -265,7 +275,10 @@ function TokenRosterRow({
                   ? 'border-[var(--vtt-gold)] bg-[var(--vtt-surface-warm)] text-[var(--vtt-gold)]'
                   : 'border-[var(--vtt-border-subtle)] text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold)] hover:text-[var(--vtt-gold)]'
               }`}
-              onClick={() => { setEditing((e) => !e); setConfirmDelete(false) }}
+              onClick={() => {
+                setEditing((e) => !e)
+                setConfirmDelete(false)
+              }}
             >
               ✏️
             </button>
@@ -294,7 +307,10 @@ function TokenRosterRow({
                 title="Eliminar ficha"
                 aria-label={`Eliminar ${t.name}`}
                 className="rounded border border-[var(--vtt-border-subtle)] px-1.5 py-0.5 text-[0.65rem] text-[var(--vtt-text-muted)] transition hover:border-[var(--vtt-ember)]/60 hover:text-[var(--vtt-danger-text)]"
-                onClick={() => { setConfirmDelete(true); setEditing(false) }}
+                onClick={() => {
+                  setConfirmDelete(true)
+                  setEditing(false)
+                }}
               >
                 🗑
               </button>
@@ -305,7 +321,10 @@ function TokenRosterRow({
 
       {/* Panel de edición inline */}
       {editing ? (
-        <div id={`${rowId}-edit`} className="flex flex-col gap-2 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-bg)] p-2">
+        <div
+          id={`${rowId}-edit`}
+          className="flex flex-col gap-2 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-bg)] p-2"
+        >
           <label className="block text-[0.65rem] text-[var(--vtt-text-muted)]">
             Nombre
             <input
@@ -379,7 +398,11 @@ function TokenRosterRow({
             <button type="button" className="vtt-btn-primary flex-1 text-xs" onClick={saveEdit}>
               Guardar cambios
             </button>
-            <button type="button" className="vtt-btn-secondary text-xs" onClick={() => setEditing(false)}>
+            <button
+              type="button"
+              className="vtt-btn-secondary text-xs"
+              onClick={() => setEditing(false)}
+            >
               Cancelar
             </button>
           </div>

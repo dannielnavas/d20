@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { Socket } from 'socket.io-client'
-import type { RoomState, Token } from '../../types/room'
-import type { PrivateNotesPair } from '../../types/private-notes'
 import { DEFAULT_TOKEN_FRAME_COLOR, TOKEN_FRAME_COLORS } from '../../config/tokenFrameColors'
+import type { PrivateNotesPair } from '../../types/private-notes'
+import type { RoomState, Token } from '../../types/room'
 import { ChatPanel } from '../chat/ChatPanel'
 import { PrivateNotesPanel } from '../chat/PrivateNotesPanel'
 import { DicePanel } from '../dice/DicePanel'
+import { DmCollapsibleCard } from '../dm/DmCollapsibleCard'
 import { InitiativePanel } from '../initiative/InitiativePanel'
 import { ScreenReactionPalette } from '../reactions/ScreenReactionPalette'
 import { ImageRevealTool } from '../reveal/ImageRevealTool'
-import { DmCollapsibleCard } from '../dm/DmCollapsibleCard'
 
 export type PlayerHudColumnProps = {
   roomId: string
@@ -88,7 +88,9 @@ export function PlayerHudColumn({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-vtt-display text-sm text-[var(--vtt-text)]">{currentToken.name}</p>
+                <p className="font-vtt-display text-sm text-[var(--vtt-text)]">
+                  {currentToken.name}
+                </p>
                 <p className="text-[0.72rem] text-[var(--vtt-text-muted)]">
                   HP {hpCurrentDraft}/{hpMaxDraft} · +{hpTempDraft}
                 </p>
@@ -190,7 +192,13 @@ export function PlayerHudColumn({
         />
       </DmCollapsibleCard>
 
-      <DmCollapsibleCard roomId={roomId} sectionId="player-chat" title="Chat y Actividad" badge={chatBadge} onExpandedChange={setChatDmSectionOpen}>
+      <DmCollapsibleCard
+        roomId={roomId}
+        sectionId="player-chat"
+        title="Chat y Actividad"
+        badge={chatBadge}
+        onExpandedChange={setChatDmSectionOpen}
+      >
         <ChatPanel
           socket={socket}
           roomState={roomState}
@@ -206,29 +214,34 @@ export function PlayerHudColumn({
       </DmCollapsibleCard>
 
       <DmCollapsibleCard roomId={roomId} sectionId="player-notes" title="Notas Privadas (Narrador)">
-         <PrivateNotesPanel
-            variant="player"
-            socket={socket}
-            pair={privateNotesPlayerPair}
-            open
-            layout="dock"
-            nestedInHud
-         />
+        <PrivateNotesPanel
+          variant="player"
+          socket={socket}
+          pair={privateNotesPlayerPair}
+          open
+          layout="dock"
+          nestedInHud
+        />
       </DmCollapsibleCard>
 
-      <DmCollapsibleCard roomId={roomId} sectionId="player-tools" title="Reacciones e Imagen" defaultExpanded={false}>
+      <DmCollapsibleCard
+        roomId={roomId}
+        sectionId="player-tools"
+        title="Reacciones e Imagen"
+        defaultExpanded={false}
+      >
         <div className="mt-2 space-y-4 px-2 py-2">
+          <div>
+            <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]">
+              Reacciones rápidas
+            </p>
+            <ScreenReactionPalette socket={socket} />
+          </div>
+          {roomState.settings.playersCanRevealImage ? (
             <div>
-              <p className="mb-1 text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--vtt-text-muted)]">
-                Reacciones rápidas
-              </p>
-              <ScreenReactionPalette socket={socket} />
+              <ImageRevealTool socket={socket} variant="player" embedded />
             </div>
-            {roomState.settings.playersCanRevealImage ? (
-               <div>
-                  <ImageRevealTool socket={socket} variant="player" embedded />
-               </div>
-            ) : null}
+          ) : null}
         </div>
       </DmCollapsibleCard>
     </div>

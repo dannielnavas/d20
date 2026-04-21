@@ -9,22 +9,22 @@ import {
   type SetStateAction,
   type SyntheticEvent,
 } from 'react'
-import type { Socket } from 'socket.io-client'
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch'
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch'
+import type { Socket } from 'socket.io-client'
+import type { RoomState, Token } from '../../types/room'
+import { loadYoutubeIframeApi, parseYoutubeUrl, youtubeEmbedSrc } from '../../utils/youtube'
 import { DmCastForm } from '../dm/DmCastForm'
 import { DmMapPreview } from '../dm/DmMapPreview'
 import { DmMapSetupForm } from '../dm/DmMapSetupForm'
+import { DmQuickNpcPanel } from '../dm/DmQuickNpcPanel'
+import { DmSceneBar } from '../dm/DmSceneBar'
 import type { DmScreenId } from '../dm/DmScreenNav'
 import { DmScreenNav } from '../dm/DmScreenNav'
-import { DmSceneBar } from '../dm/DmSceneBar'
 import { DmTokenRoster } from '../dm/DmTokenRoster'
-import type { RoomState, Token } from '../../types/room'
-import { loadYoutubeIframeApi, parseYoutubeUrl, youtubeEmbedSrc } from '../../utils/youtube'
-import { MapPingBridge } from './MapPingLayer'
 import { ScreenReactionPalette } from '../reactions/ScreenReactionPalette'
+import { MapPingBridge } from './MapPingLayer'
 import { TokensLayer } from './TokensLayer'
-import { DmQuickNpcPanel } from '../dm/DmQuickNpcPanel'
 
 type YoutubeMapPlayer = {
   destroy: () => void
@@ -381,8 +381,9 @@ export function MapBoard({
           >
             <p id={mapBoardA11yId} className="sr-only">
               Tab para enfocar fichas que puedas mover. Las flechas mueven la ficha enfocada. Mayús
-              aumenta el paso. Arrastra con el dedo o el puntero para mover una ficha. Dos dedos en el
-              mapa vacío para acercar o alejar. Mayús y clic en el mapa para señalar un punto (ping).
+              aumenta el paso. Arrastra con el dedo o el puntero para mover una ficha. Dos dedos en
+              el mapa vacío para acercar o alejar. Mayús y clic en el mapa para señalar un punto
+              (ping).
             </p>
             <TransformWrapper
               onInit={handleTransformInit}

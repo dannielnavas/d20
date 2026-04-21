@@ -18,7 +18,14 @@ export function mediaPeerJoin(
   displayName: string,
   avatarUrl?: string | null,
   frameColor?: string | null,
-): { others: { peerId: string; displayName: string; avatarUrl: string | null; frameColor: string | null }[] } {
+): {
+  others: {
+    peerId: string
+    displayName: string
+    avatarUrl: string | null
+    frameColor: string | null
+  }[]
+} {
   const m = getMap(roomId)
   const trimmed = displayName.trim().slice(0, 48) || 'Participante'
   const avatar =
@@ -30,10 +37,20 @@ export function mediaPeerJoin(
       ? frameColor.trim().toLowerCase()
       : null
   m.set(socketId, { displayName: trimmed, avatarUrl: avatar, frameColor: color })
-  const others: { peerId: string; displayName: string; avatarUrl: string | null; frameColor: string | null }[] = []
+  const others: {
+    peerId: string
+    displayName: string
+    avatarUrl: string | null
+    frameColor: string | null
+  }[] = []
   for (const [id, info] of m) {
     if (id !== socketId) {
-      others.push({ peerId: id, displayName: info.displayName, avatarUrl: info.avatarUrl, frameColor: info.frameColor })
+      others.push({
+        peerId: id,
+        displayName: info.displayName,
+        avatarUrl: info.avatarUrl,
+        frameColor: info.frameColor,
+      })
     }
   }
   return { others }

@@ -274,7 +274,9 @@ export function normalizeRoomState(payload: RoomState): RoomState {
   for (const sc of scenes) {
     if (!sc.settings) sc.settings = defaultSceneMapSettings()
     if (!Array.isArray(sc.tokens)) sc.tokens = []
-    sc.tokens = sc.tokens.map((token) => normalizeToken(token)).filter((token): token is Token => token !== null)
+    sc.tokens = sc.tokens
+      .map((token) => normalizeToken(token))
+      .filter((token): token is Token => token !== null)
   }
 
   const active =

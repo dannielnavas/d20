@@ -8,9 +8,16 @@ import {
   type SetStateAction,
 } from 'react'
 import { io, type Socket } from 'socket.io-client'
-import type { DiceMode, DieType, RoomState, RollRequestFeedback } from '../../types/room'
 import type { ImageRevealPayload } from '../../types/image-reveal'
+import type { PrivateNotesPair } from '../../types/private-notes'
+import type { DiceMode, DieType, RollRequestFeedback, RoomState } from '../../types/room'
 import type { SessionState } from '../../types/session'
+import { playChatSound, playHandRaisedSound, playWhisperSound } from '../../utils/audioFx'
+import {
+  parseScreenReactionPayload,
+  screenReactionSpotForIndex,
+  type ScreenReactionBurst,
+} from '../../utils/screenReactionBurst'
 import { SOCKET_URL } from './constants'
 import {
   normalizeRoomState,
@@ -18,13 +25,6 @@ import {
   parseSessionState,
   type TokenPosEvent,
 } from './roomParsers'
-import type { PrivateNotesPair } from '../../types/private-notes'
-import {
-  parseScreenReactionPayload,
-  screenReactionSpotForIndex,
-  type ScreenReactionBurst,
-} from '../../utils/screenReactionBurst'
-import { playChatSound, playWhisperSound, playHandRaisedSound } from '../../utils/audioFx'
 
 export type JoinPayload = {
   roomId: string
@@ -341,19 +341,19 @@ export function usePlayRoomSocket(
   }, [state?.diceLog, triggerRollFx, lastRollIdRef])
 
   const lastChatIdRef = useRef<string | null>(null)
-  
+
   useEffect(() => {
     if (!state?.chatLog || state.chatLog.length === 0) return
     const latest = state.chatLog[0]
-    
+
     if (lastChatIdRef.current === null) {
       lastChatIdRef.current = latest.id
       return
     }
-    
+
     if (lastChatIdRef.current !== latest.id) {
       lastChatIdRef.current = latest.id
-      
+
       const isOurs =
         (latest.authorSessionId && joinPayload?.playerSessionId === latest.authorSessionId) ||
         ((latest.author === 'DM' || latest.author === 'Narrador') && session?.role === 'dm')
@@ -368,31 +368,34 @@ export function usePlayRoomSocket(
   }, [state?.chatLog, session, joinPayload?.playerSessionId])
 
   const lastHandsRef = useRef<string[]>([])
-  
+
   useEffect(() => {
     if (!state) return
     const currentHands = state.raisedHands || []
-    
+
     if (lastHandsRef.current.length > 0 || currentHands.length > 0) {
       const newHands = currentHands.filter((h) => !lastHandsRef.current.includes(h))
       if (newHands.length > 0) {
-         const someoneElse = newHands.some((h) => h !== joinPayload?.playerSessionId)
-         if (someoneElse) {
-            playHandRaisedSound()
-         }
+        const someoneElse = newHands.some((h) => h !== joinPayload?.playerSessionId)
+        if (someoneElse) {
+          playHandRaisedSound()
+        }
       }
     }
-    
+
     lastHandsRef.current = currentHands
   }, [state, state?.raisedHands, joinPayload?.playerSessionId])
 
   const lastNoteDmRef = useRef<string | null>(null)
-  
+
   useEffect(() => {
     if (session?.role === 'player' && privateNotesPlayerPair) {
       if (lastNoteDmRef.current !== null && privateNotesPlayerPair.dm !== lastNoteDmRef.current) {
-        if (privateNotesPlayerPair.dm.length > (lastNoteDmRef.current.length) || privateNotesPlayerPair.dm !== lastNoteDmRef.current) {
-           playWhisperSound()
+        if (
+          privateNotesPlayerPair.dm.length > lastNoteDmRef.current.length ||
+          privateNotesPlayerPair.dm !== lastNoteDmRef.current
+        ) {
+          playWhisperSound()
         }
       }
       lastNoteDmRef.current = privateNotesPlayerPair.dm
@@ -400,7 +403,7 @@ export function usePlayRoomSocket(
   }, [privateNotesPlayerPair, session?.role])
 
   const lastNotePlayerBySessionRef = useRef<Record<string, string>>({})
-  
+
   useEffect(() => {
     if (session?.role === 'dm') {
       let changed = false

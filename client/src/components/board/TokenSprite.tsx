@@ -67,27 +67,29 @@ export function TokenSprite({
     </span>
   ) : null
 
-  const hpBlock = hpMax > 0 || hpCurrent > 0 || hpTemp > 0 ? (
-    <div className="mt-1 w-[min(5.25rem,16vw)]" aria-hidden>
-      <div className="overflow-hidden rounded-full border border-black/40 bg-black/65 shadow-[0_3px_10px_rgba(0,0,0,0.3)]">
-        <div className="relative h-2 w-full bg-[rgba(90,26,26,0.85)]">
-          <div
-            className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,#8b2f22,#d96a3f)]"
-            style={{ width: `${currentPct}%` }}
-          />
-          {tempPct > 0 ? (
+  const hpBlock =
+    hpMax > 0 || hpCurrent > 0 || hpTemp > 0 ? (
+      <div className="mt-1 w-[min(5.25rem,16vw)]" aria-hidden>
+        <div className="overflow-hidden rounded-full border border-black/40 bg-black/65 shadow-[0_3px_10px_rgba(0,0,0,0.3)]">
+          <div className="relative h-2 w-full bg-[rgba(90,26,26,0.85)]">
             <div
-              className="absolute inset-y-0 bg-[linear-gradient(90deg,#70b7c5,#d4f0f5)]"
-              style={{ left: `${currentPct}%`, width: `${tempPct}%` }}
+              className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,#8b2f22,#d96a3f)]"
+              style={{ width: `${currentPct}%` }}
             />
-          ) : null}
+            {tempPct > 0 ? (
+              <div
+                className="absolute inset-y-0 bg-[linear-gradient(90deg,#70b7c5,#d4f0f5)]"
+                style={{ left: `${currentPct}%`, width: `${tempPct}%` }}
+              />
+            ) : null}
+          </div>
         </div>
+        <p className="mt-0.5 text-center font-vtt-display text-[0.52rem] font-semibold uppercase tracking-[0.12em] text-[var(--vtt-text)] drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+          {hpCurrent}/{hpMax}
+          {hpTemp > 0 ? ` +${hpTemp}` : ''}
+        </p>
       </div>
-      <p className="mt-0.5 text-center font-vtt-display text-[0.52rem] font-semibold uppercase tracking-[0.12em] text-[var(--vtt-text)] drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-        {hpCurrent}/{hpMax}{hpTemp > 0 ? ` +${hpTemp}` : ''}
-      </p>
-    </div>
-  ) : null
+    ) : null
 
   const reactionEmoji =
     reactionBurst !== null ? (getQuickReaction(reactionBurst.reactionId)?.emoji ?? '✨') : null
@@ -164,7 +166,11 @@ export function TokenSprite({
 
   if (isGhost) {
     return (
-      <div className={columnClass} style={{ left: token.x - half, top: token.y - half }} aria-hidden>
+      <div
+        className={columnClass}
+        style={{ left: token.x - half, top: token.y - half }}
+        aria-hidden
+      >
         <div
           className={`vtt-token ${circleClass} pointer-events-none`}
           style={{ ...circleStyle, borderColor: token.frameColor ?? 'var(--vtt-border)' }}

@@ -1,17 +1,17 @@
 import { randomInt, randomUUID } from 'crypto'
 import type { Server, Socket } from 'socket.io'
-import { snapToGrid } from './snap.js'
 import { appendActivity } from './activity-log.js'
-import { clearRaisedHandForToken } from './raise-hand-state.js'
 import { syncInitiative } from './initiative-sync.js'
+import { schedulePersist } from './persistence.js'
+import { clearRaisedHandForToken } from './raise-hand-state.js'
 import { broadcastRoomState } from './room-broadcast.js'
 import { clearSessionPassword, setSessionPasswordHash } from './room-session-password.js'
 import { getOrCreateRoom } from './rooms.js'
-import { assertDm } from './socket-dm-assert.js'
-import type { VttSocketData } from './socket-data.js'
 import { allRoomTokens, findTokenInRoom, getActiveScene } from './scene-helpers.js'
+import { snapToGrid } from './snap.js'
+import type { VttSocketData } from './socket-data.js'
+import { assertDm } from './socket-dm-assert.js'
 import type { RoomState, Token } from './types.js'
-import { schedulePersist } from './persistence.js'
 
 const ALLOWED_FRAME_COLORS = new Set([
   '#b48a3c',
@@ -472,7 +472,8 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     if (!token) return
     if (!canPatchToken(socket, token)) {
       socket.emit('dmError', {
-        message: 'No puedes editar esa ficha. Solo el Narrador o el jugador que la controla pueden hacerlo.',
+        message:
+          'No puedes editar esa ficha. Solo el Narrador o el jugador que la controla pueden hacerlo.',
       })
       return
     }
@@ -576,63 +577,63 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     broadcastRoomState(io, room)
   })
 
-    socket.on('spawnPc', (payload: unknown) => {
-      if (!assertDm(socket)) return
-      const roomId = (socket.data as VttSocketData).roomId
-      if (!roomId) return
-      const parsed = parseSpawnPayload(payload, { defaultName: 'Héroe', allowCount: true })
-      if (!parsed) {
-        socket.emit('dmError', {
-          message: 'No pudimos añadir los personajes. Revisa cantidad, nombre o imagen.',
-        })
-        return
+  socket.on('spawnPc', (payload: unknown) => {
+    if (!assertDm(socket)) return
+    const roomId = (socket.data as VttSocketData).roomId
+    if (!roomId) return
+    const parsed = parseSpawnPayload(payload, { defaultName: 'Héroe', allowCount: true })
+    if (!parsed) {
+      socket.emit('dmError', {
+        message: 'No pudimos añadir los personajes. Revisa cantidad, nombre o imagen.',
+      })
+      return
+    }
+
+    const raw = payload as Record<string, unknown>
+    const explicitImg =
+      typeof raw.img === 'string' && raw.img.trim() ? raw.img.trim().slice(0, 2000) : null
+
+    const room = getOrCreateRoom(roomId)
+    const baseName = parsed.name.trim() || 'Héroe'
+    const baseSlot = getActiveScene(room).tokens.filter(
+      (t) => t.type !== 'npc' || t.onMap !== false,
+    ).length
+
+    for (let i = 0; i < parsed.count; i++) {
+      const displayName = parsed.count > 1 ? `${baseName} ${i + 1}`.trim() : baseName
+      const slot = baseSlot + i
+      const { x, y } = placeTokenXY(room, parsed.x, parsed.y, slot)
+
+      let img: string
+      if (explicitImg) {
+        img = explicitImg
+      } else if (parsed.count === 1) {
+        img = parsed.img
+      } else {
+        img = randomPortrait()
       }
 
-      const raw = payload as Record<string, unknown>
-      const explicitImg =
-        typeof raw.img === 'string' && raw.img.trim() ? raw.img.trim().slice(0, 2000) : null
-
-      const room = getOrCreateRoom(roomId)
-      const baseName = parsed.name.trim() || 'Héroe'
-      const baseSlot = getActiveScene(room).tokens.filter(
-        (t) => t.type !== 'npc' || t.onMap !== false,
-      ).length
-
-      for (let i = 0; i < parsed.count; i++) {
-        const displayName = parsed.count > 1 ? `${baseName} ${i + 1}`.trim() : baseName
-        const slot = baseSlot + i
-        const { x, y } = placeTokenXY(room, parsed.x, parsed.y, slot)
-
-        let img: string
-        if (explicitImg) {
-          img = explicitImg
-        } else if (parsed.count === 1) {
-          img = parsed.img
-        } else {
-          img = randomPortrait()
-        }
-
-        const token: Token = {
-          id: `pc-${randomUUID().replace(/-/g, '').slice(0, 12)}`,
-          name: displayName.slice(0, 80),
-          img,
-          frameColor: '#b48a3c',
-          x,
-          y,
-          size: parsed.size,
-          type: 'pc',
-          ownerSocket: null,
-          claimedBy: null,
-          hitPointsCurrent: 0,
-          hitPointsMax: 0,
-          hitPointsTemp: 0,
-          conditions: [],
-        }
-        getActiveScene(room).tokens.push(token)
+      const token: Token = {
+        id: `pc-${randomUUID().replace(/-/g, '').slice(0, 12)}`,
+        name: displayName.slice(0, 80),
+        img,
+        frameColor: '#b48a3c',
+        x,
+        y,
+        size: parsed.size,
+        type: 'pc',
+        ownerSocket: null,
+        claimedBy: null,
+        hitPointsCurrent: 0,
+        hitPointsMax: 0,
+        hitPointsTemp: 0,
+        conditions: [],
       }
+      getActiveScene(room).tokens.push(token)
+    }
 
-      broadcastRoomState(io, room)
-    })
+    broadcastRoomState(io, room)
+  })
 
   socket.on('setActiveScene', (payload: unknown) => {
     if (!assertDm(socket)) return
@@ -649,7 +650,7 @@ export function registerDmHandlers(io: Server, socket: Socket) {
 
     const oldScene = getActiveScene(room)
     const newScene = room.scenes.find((s) => s.id === sceneId)!
-    
+
     if (oldScene.id !== newScene.id) {
       const pcs = oldScene.tokens.filter((t) => t.type === 'pc')
       for (const pc of pcs) {

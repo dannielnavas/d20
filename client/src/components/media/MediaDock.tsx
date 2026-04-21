@@ -180,7 +180,10 @@ function VideoThumb({
           {avatarUrl ? (
             <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
           ) : (
-            <span className="font-vtt-display text-[0.58rem] uppercase tracking-[0.12em]" style={{ color: accent }}>
+            <span
+              className="font-vtt-display text-[0.58rem] uppercase tracking-[0.12em]"
+              style={{ color: accent }}
+            >
               {name.slice(0, 2)}
             </span>
           )}
@@ -204,12 +207,18 @@ function VideoThumb({
         </span>
       ) : null}
       {isNarrator ? (
-        <div className="pointer-events-none absolute left-1/2 top-1 z-[3] -translate-x-1/2 rounded-full px-2 py-0.5 font-vtt-display text-[0.45rem] font-semibold uppercase tracking-[0.24em] text-[var(--vtt-bg)]" style={{ backgroundColor: accent }}>
+        <div
+          className="pointer-events-none absolute left-1/2 top-1 z-[3] -translate-x-1/2 rounded-full px-2 py-0.5 font-vtt-display text-[0.45rem] font-semibold uppercase tracking-[0.24em] text-[var(--vtt-bg)]"
+          style={{ backgroundColor: accent }}
+        >
           Narrador
         </div>
       ) : null}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-1 pb-1 pt-4">
-        <p className="truncate text-center font-vtt-display text-[0.55rem] font-semibold uppercase tracking-[0.22em]" style={{ color: accent }}>
+        <p
+          className="truncate text-center font-vtt-display text-[0.55rem] font-semibold uppercase tracking-[0.22em]"
+          style={{ color: accent }}
+        >
           {name}
         </p>
       </div>
@@ -327,7 +336,12 @@ export function MediaDock({
     if (!inCall || !localStream) return
 
     const onSnapshot = async (msg: {
-      peers: { peerId: string; displayName: string; avatarUrl?: string | null; frameColor?: string | null }[]
+      peers: {
+        peerId: string
+        displayName: string
+        avatarUrl?: string | null
+        frameColor?: string | null
+      }[]
     }) => {
       const stream = localStreamRef.current
       if (!stream) return
@@ -339,7 +353,9 @@ export function MediaDock({
         )
         frameColorsRef.current.set(
           peer.peerId,
-          typeof peer.frameColor === 'string' && peer.frameColor.length > 0 ? peer.frameColor : null,
+          typeof peer.frameColor === 'string' && peer.frameColor.length > 0
+            ? peer.frameColor
+            : null,
         )
         try {
           const pc = getOrCreatePc(peer.peerId)
@@ -405,7 +421,9 @@ export function MediaDock({
             avatarUrl:
               typeof msg.avatarUrl === 'string' && msg.avatarUrl.length > 0 ? msg.avatarUrl : null,
             frameColor:
-              typeof msg.frameColor === 'string' && msg.frameColor.length > 0 ? msg.frameColor : null,
+              typeof msg.frameColor === 'string' && msg.frameColor.length > 0
+                ? msg.frameColor
+                : null,
           },
         }
       })
@@ -611,7 +629,11 @@ export function MediaDock({
   }, [avatarUrl, frameColor, inCall, label, localStream, remoteEntries, session.role])
 
   const toolbar = (
-    <div className="flex flex-wrap items-center justify-center gap-2" role="toolbar" aria-label="Controles de llamada">
+    <div
+      className="flex flex-wrap items-center justify-center gap-2"
+      role="toolbar"
+      aria-label="Controles de llamada"
+    >
       {!inCall ? (
         <MediaIconBtn
           label="Unirse con audio y vídeo"
@@ -630,7 +652,11 @@ export function MediaDock({
             pressed={micOn}
             off={!micOn}
           >
-            {micOn ? <IconMicOn className="size-[1.05rem]" /> : <IconMicOff className="size-[1.05rem]" />}
+            {micOn ? (
+              <IconMicOn className="size-[1.05rem]" />
+            ) : (
+              <IconMicOff className="size-[1.05rem]" />
+            )}
           </MediaIconBtn>
           <MediaIconBtn
             label={camOn ? 'Apagar cámara' : 'Encender cámara'}
@@ -639,7 +665,11 @@ export function MediaDock({
             pressed={camOn}
             off={!camOn}
           >
-            {camOn ? <IconCamOn className="size-[1.05rem]" /> : <IconCamOff className="size-[1.05rem]" />}
+            {camOn ? (
+              <IconCamOn className="size-[1.05rem]" />
+            ) : (
+              <IconCamOff className="size-[1.05rem]" />
+            )}
           </MediaIconBtn>
           <MediaIconBtn
             label="Colgar y salir de la llamada"
@@ -656,7 +686,9 @@ export function MediaDock({
 
   const filmstrip =
     inCall && localStream ? (
-      <div className={`vtt-media-filmstrip flex gap-2 ${compact ? 'overflow-x-auto pb-1 pt-1' : 'flex-wrap justify-center py-2'}`}>
+      <div
+        className={`vtt-media-filmstrip flex gap-2 ${compact ? 'overflow-x-auto pb-1 pt-1' : 'flex-wrap justify-center py-2'}`}
+      >
         <VideoThumb
           stream={localStream}
           name={`Tú · ${label}`}
@@ -694,56 +726,71 @@ export function MediaDock({
     return (
       <div className="pointer-events-none fixed inset-0 z-[86]" aria-label="Mesa de voz y cámara">
         {mediaErr ? (
-          <p role="alert" className="pointer-events-auto absolute left-1/2 top-3 z-[87] -translate-x-1/2 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-danger-border)] bg-[var(--vtt-danger-bg)] px-3 py-1.5 text-xs text-[var(--vtt-danger-text)]">
+          <p
+            role="alert"
+            className="pointer-events-auto absolute left-1/2 top-3 z-[87] -translate-x-1/2 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-danger-border)] bg-[var(--vtt-danger-bg)] px-3 py-1.5 text-xs text-[var(--vtt-danger-text)]"
+          >
             {mediaErr}
           </p>
         ) : null}
 
-        {mapParticipants?.all ? (() => {
-          const narratorParticipants = mapParticipants.all.filter((participant) => participant.isNarrator)
-          const playerParticipants = mapParticipants.all.filter((participant) => !participant.isNarrator)
-          return (
-            <>
-              {narratorParticipants.length > 0 ? (
-                <div className="pointer-events-auto absolute left-1/2 top-3 z-[86] flex -translate-x-1/2 flex-row gap-3">
-                  {narratorParticipants.map((participant) => (
-                    <VideoThumb
-                      key={participant.id}
-                      stream={participant.stream}
-                      name={participant.label}
-                      avatarUrl={participant.avatarUrl}
-                      frameColor={participant.frameColor}
-                      muted={participant.muted}
-                      compact
-                      featured
-                      handRaised={participant.id === 'local' ? localHandRaised : false}
-                      isNarrator
-                    />
-                  ))}
-                </div>
-              ) : null}
-              {playerParticipants.length > 0 ? (
-                <div className="pointer-events-auto absolute bottom-24 left-3 top-20 z-[86] flex w-[min(100%,11rem)] flex-col gap-3 overflow-y-auto xl:w-[12rem] hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                  {playerParticipants.map((participant) => (
-                    <VideoThumb
-                      key={participant.id}
-                      stream={participant.stream}
-                      name={participant.label}
-                      avatarUrl={participant.avatarUrl}
-                      frameColor={participant.frameColor}
-                      muted={participant.muted}
-                      compact
-                      featured={false}
-                      handRaised={participant.id === 'local' ? localHandRaised : false}
-                    />
-                  ))}
-                </div>
-              ) : null}
-            </>
-          )
-        })() : null}
+        {mapParticipants?.all
+          ? (() => {
+              const narratorParticipants = mapParticipants.all.filter(
+                (participant) => participant.isNarrator,
+              )
+              const playerParticipants = mapParticipants.all.filter(
+                (participant) => !participant.isNarrator,
+              )
+              return (
+                <>
+                  {narratorParticipants.length > 0 ? (
+                    <div className="pointer-events-auto absolute left-1/2 top-3 z-[86] flex -translate-x-1/2 flex-row gap-3">
+                      {narratorParticipants.map((participant) => (
+                        <VideoThumb
+                          key={participant.id}
+                          stream={participant.stream}
+                          name={participant.label}
+                          avatarUrl={participant.avatarUrl}
+                          frameColor={participant.frameColor}
+                          muted={participant.muted}
+                          compact
+                          featured
+                          handRaised={participant.id === 'local' ? localHandRaised : false}
+                          isNarrator
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                  {playerParticipants.length > 0 ? (
+                    <div
+                      className="pointer-events-auto absolute bottom-24 left-3 top-20 z-[86] flex w-[min(100%,11rem)] flex-col gap-3 overflow-y-auto xl:w-[12rem] hide-scrollbar"
+                      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                    >
+                      {playerParticipants.map((participant) => (
+                        <VideoThumb
+                          key={participant.id}
+                          stream={participant.stream}
+                          name={participant.label}
+                          avatarUrl={participant.avatarUrl}
+                          frameColor={participant.frameColor}
+                          muted={participant.muted}
+                          compact
+                          featured={false}
+                          handRaised={participant.id === 'local' ? localHandRaised : false}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                </>
+              )
+            })()
+          : null}
 
-        <div className="vtt-media-dock-map-shell pointer-events-auto absolute bottom-0 left-1/2 z-[87] w-[min(20rem,calc(100vw-1rem))] -translate-x-1/2 rounded-t-[var(--vtt-radius)] px-2 py-2" style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 0px))' }}>
+        <div
+          className="vtt-media-dock-map-shell pointer-events-auto absolute bottom-0 left-1/2 z-[87] w-[min(20rem,calc(100vw-1rem))] -translate-x-1/2 rounded-t-[var(--vtt-radius)] px-2 py-2"
+          style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 0px))' }}
+        >
           <PresenceStrip
             socket={socket}
             roomState={roomState}
@@ -759,7 +806,10 @@ export function MediaDock({
   }
 
   return (
-    <section className="vtt-surface vtt-glow-border w-full shrink-0 overflow-hidden p-4" aria-label="Llamada de mesa (audio y vídeo)">
+    <section
+      className="vtt-surface vtt-glow-border w-full shrink-0 overflow-hidden p-4"
+      aria-label="Llamada de mesa (audio y vídeo)"
+    >
       <div className="flex flex-col gap-1 border-b border-[var(--vtt-border-subtle)] pb-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="font-vtt-display text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-[var(--vtt-gold)]">
