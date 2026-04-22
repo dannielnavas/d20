@@ -45,8 +45,8 @@ export function useChatMentionNotify(
   session: SessionState | null,
   playerSessionId: string | null,
   chatExpanded: boolean,
-): { toast: { author: string; preview: string } | null; dismissToast: () => void } {
-  const [toast, setToast] = useState<{ author: string; preview: string } | null>(null)
+): { toast: { messageId: string; author: string; preview: string } | null; dismissToast: () => void } {
+  const [toast, setToast] = useState<{ messageId: string; author: string; preview: string } | null>(null)
   const lastHandledId = useRef<string | null>(null)
 
   useEffect(() => {
@@ -66,7 +66,7 @@ export function useChatMentionNotify(
     if (!recipientMatched(session, playerSessionId, mentions)) return
     if (chatExpanded) return
 
-    setToast({ author: head.author, preview: head.text.slice(0, 140) })
+    setToast({ messageId: head.id, author: head.author, preview: head.text.slice(0, 140) })
     playMentionChime()
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       try {

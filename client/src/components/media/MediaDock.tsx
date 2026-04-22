@@ -30,6 +30,16 @@ type RemoteTile = {
   frameColor: string | null
 }
 
+type ParticipantTile = {
+  id: string
+  label: string
+  isNarrator: boolean
+  stream: MediaStream
+  muted: boolean
+  avatarUrl: string | null
+  frameColor: string | null
+}
+
 function iceServers(): RTCIceServer[] {
   const raw = import.meta.env.VITE_STUN_URLS as string | undefined
   if (raw?.trim()) {
@@ -70,6 +80,76 @@ function localFrameColor(session: SessionState, roomState: RoomState): string | 
 
 function isNarratorLabel(label: string): boolean {
   return label.trim().toLowerCase() === 'narrador'
+}
+
+function hasUsableVideo(stream: MediaStream | null): boolean {
+  if (!stream) return false
+  return stream.getVideoTracks().some((track) => track.readyState === 'live' && !track.muted)
+}
+
+function useSpeakingLevels(participants: ParticipantTile[]): Record<string, number> {
+  const [levels, setLevels] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!AudioCtx) return
+
+    const context = new AudioCtx()
+    const analysers = new Map<string, { analyser: AnalyserNode; data: Uint8Array; source: MediaStreamAudioSourceNode }>()
+    let frameId = 0
+    let cancelled = false
+
+    for (const participant of participants) {
+      if (participant.muted) continue
+      if (participant.stream.getAudioTracks().length === 0) continue
+      try {
+        const analyser = context.createAnalyser()
+        analyser.fftSize = 256
+        analyser.smoothingTimeConstant = 0.82
+        const source = context.createMediaStreamSource(participant.stream)
+        source.connect(analyser)
+        analysers.set(participant.id, {
+          analyser,
+          data: new Uint8Array(analyser.frequencyBinCount) as Uint8Array<ArrayBuffer>,
+          source,
+        })
+      } catch {
+        /* algunos navegadores o streams remotos pueden rechazar el análisis */
+      }
+    }
+
+    const tick = () => {
+      if (cancelled) return
+      const next: Record<string, number> = {}
+      analysers.forEach((entry, id) => {
+        entry.analyser.getByteFrequencyData(entry.data as Uint8Array<ArrayBuffer>)
+        let sum = 0
+        for (let index = 0; index < entry.data.length; index += 1) sum += entry.data[index] ?? 0
+        next[id] = sum / (entry.data.length * 255)
+      })
+      setLevels(next)
+      frameId = window.requestAnimationFrame(tick)
+    }
+
+    void context.resume().catch(() => {})
+    frameId = window.requestAnimationFrame(tick)
+
+    return () => {
+      cancelled = true
+      if (frameId) window.cancelAnimationFrame(frameId)
+      analysers.forEach((entry) => {
+        try {
+          entry.source.disconnect()
+        } catch {
+          /* noop */
+        }
+      })
+      void context.close().catch(() => {})
+    }
+  }, [participants])
+
+  return levels
 }
 
 type IconBtnProps = {
@@ -117,6 +197,8 @@ function VideoThumb({
   name,
   avatarUrl,
   frameColor,
+  isSpeaking = false,
+  isLeadSpeaker = false,
   muted,
   compact,
   featured,
@@ -127,6 +209,8 @@ function VideoThumb({
   name: string
   avatarUrl?: string | null
   frameColor?: string | null
+  isSpeaking?: boolean
+  isLeadSpeaker?: boolean
   muted?: boolean
   compact: boolean
   featured?: boolean
@@ -134,6 +218,7 @@ function VideoThumb({
   isNarrator?: boolean
 }) {
   const ref = useRef<HTMLVideoElement>(null)
+  const showPortrait = !hasUsableVideo(stream)
 
   useEffect(() => {
     const element = ref.current
@@ -154,7 +239,7 @@ function VideoThumb({
 
   return (
     <div
-      className={shellClass}
+      className={`${shellClass} vtt-media-thumb ${isSpeaking ? 'vtt-media-thumb--speaking' : ''} ${isLeadSpeaker ? 'vtt-media-thumb--lead' : ''}`}
       style={{
         borderColor: accent,
         boxShadow: `0 0 0 1px ${accent}44, 0 12px 36px rgba(0,0,0,0.55)`,
@@ -188,15 +273,29 @@ function VideoThumb({
             </span>
           )}
         </div>
-        <video
-          ref={ref}
-          className="h-full min-w-0 flex-1 object-cover"
-          playsInline
-          muted={muted}
-          autoPlay
-          aria-label={name}
-        />
+        <div className="relative min-w-0 flex-1 overflow-hidden">
+          <video
+            ref={ref}
+            className={`h-full w-full object-cover transition-opacity duration-300 ${showPortrait ? 'opacity-0' : 'opacity-100'}`}
+            playsInline
+            muted={muted}
+            autoPlay
+            aria-label={name}
+          />
+          {showPortrait ? (
+            <div className="vtt-media-thumb__portrait absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.07),transparent_28%),linear-gradient(180deg,rgba(20,16,12,0.9),rgba(8,7,6,0.98))]">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="vtt-media-thumb__portrait-img h-full w-full object-cover" />
+              ) : (
+                <span className="font-vtt-display text-xl uppercase tracking-[0.16em]" style={{ color: accent }}>
+                  {name.slice(0, 2)}
+                </span>
+              )}
+            </div>
+          ) : null}
+        </div>
       </div>
+      {isSpeaking ? <span className="vtt-media-thumb__voice-waves" aria-hidden /> : null}
       {handRaised ? (
         <span
           className="pointer-events-none absolute right-1 top-1 z-[3] text-[1.05rem] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
@@ -628,6 +727,21 @@ export function MediaDock({
     return { all }
   }, [avatarUrl, frameColor, inCall, label, localStream, remoteEntries, session.role])
 
+  const participants = useMemo(() => mapParticipants?.all ?? [], [mapParticipants])
+  const speakingLevels = useSpeakingLevels(participants)
+  const activeSpeakerId = useMemo(() => {
+    let topId: string | null = null
+    let topLevel = 0.06
+    for (const participant of participants) {
+      const level = speakingLevels[participant.id] ?? 0
+      if (level > topLevel) {
+        topLevel = level
+        topId = participant.id
+      }
+    }
+    return topId
+  }, [participants, speakingLevels])
+
   const toolbar = (
     <div
       className="flex flex-wrap items-center justify-center gap-2"
@@ -694,6 +808,8 @@ export function MediaDock({
           name={`Tú · ${label}`}
           avatarUrl={avatarUrl}
           frameColor={frameColor}
+          isSpeaking={(speakingLevels.local ?? 0) > 0.055}
+          isLeadSpeaker={activeSpeakerId === 'local'}
           muted
           compact={compact}
           handRaised={localHandRaised}
@@ -706,6 +822,8 @@ export function MediaDock({
             name={remote.label}
             avatarUrl={remote.avatarUrl}
             frameColor={remote.frameColor}
+            isSpeaking={(speakingLevels[peerId] ?? 0) > 0.055}
+            isLeadSpeaker={activeSpeakerId === peerId}
             compact={compact}
             isNarrator={isNarratorLabel(remote.label)}
           />
@@ -753,9 +871,11 @@ export function MediaDock({
                           name={participant.label}
                           avatarUrl={participant.avatarUrl}
                           frameColor={participant.frameColor}
+                          isSpeaking={(speakingLevels[participant.id] ?? 0) > 0.055}
+                          isLeadSpeaker={activeSpeakerId === participant.id}
                           muted={participant.muted}
                           compact
-                          featured
+                          featured={activeSpeakerId === participant.id || narratorParticipants.length === 1}
                           handRaised={participant.id === 'local' ? localHandRaised : false}
                           isNarrator
                         />
@@ -774,9 +894,11 @@ export function MediaDock({
                           name={participant.label}
                           avatarUrl={participant.avatarUrl}
                           frameColor={participant.frameColor}
+                          isSpeaking={(speakingLevels[participant.id] ?? 0) > 0.055}
+                          isLeadSpeaker={activeSpeakerId === participant.id}
                           muted={participant.muted}
                           compact
-                          featured={false}
+                          featured={activeSpeakerId === participant.id}
                           handRaised={participant.id === 'local' ? localHandRaised : false}
                         />
                       ))}

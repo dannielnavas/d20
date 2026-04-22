@@ -18,6 +18,8 @@ export type PlayerHudColumnProps = {
   privateNotesPlayerPair: PrivateNotesPair | null
   chatExpanded: boolean
   onChatExpandedChange: (v: boolean) => void
+  chatScrollToMessageId?: string | null
+  onChatScrollHandled?: (messageId: string) => void
   initiativeTokens: Token[]
   playerSessionId: string
   canRequestRoll: boolean
@@ -31,6 +33,8 @@ export function PlayerHudColumn({
   privateNotesPlayerPair,
   chatExpanded,
   onChatExpandedChange,
+  chatScrollToMessageId,
+  onChatScrollHandled,
   initiativeTokens,
   playerSessionId,
   canRequestRoll,
@@ -68,7 +72,7 @@ export function PlayerHudColumn({
 
   return (
     <div
-      className="fixed right-3 top-[5.5rem] z-[89] flex w-[min(22rem,calc(100vw-1.5rem))] max-h-[calc(100svh-5.25rem)] flex-col gap-2 overflow-y-auto pb-2 [scrollbar-gutter:stable] sm:top-24"
+      className="vtt-hud-column fixed right-3 top-[5.5rem] z-[89] flex w-[min(22rem,calc(100vw-1.5rem))] max-h-[calc(100svh-5.25rem)] flex-col gap-2 overflow-y-auto pb-2 [scrollbar-gutter:stable] sm:top-24"
       aria-label="Herramientas del jugador"
     >
       {currentToken ? (
@@ -210,6 +214,10 @@ export function PlayerHudColumn({
           nestedInHud
           dmSectionExpanded={chatDmSectionOpen}
           onUnreadCountChange={setChatUnread}
+          viewerRole="player"
+          viewerSessionId={playerSessionId}
+          scrollToMessageId={chatScrollToMessageId}
+          onScrollTargetHandled={onChatScrollHandled}
         />
       </DmCollapsibleCard>
 

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Socket } from 'socket.io-client'
 import type { RoomState } from '../../types/room'
+import { MENTION_DM_ID } from '../../utils/chatMentions'
 import { filterMentionTargets, getMentionTargetsFromRoom } from '../../utils/chatMentions'
 
 export type ChatPanelProps = {
@@ -20,10 +21,56 @@ export type ChatPanelProps = {
   /** Si el bloque del HUD está expandido (solo con `nestedInHud`, para no leídos). */
   dmSectionExpanded?: boolean
   onUnreadCountChange?: (count: number) => void
+  /** Contexto del usuario actual para destacar mensajes que le mencionan. */
+  viewerRole?: 'dm' | 'player' | 'spectator'
+  viewerSessionId?: string | null
+  /** Si viene, desplaza al mensaje y lo destaca visualmente. */
+  scrollToMessageId?: string | null
+  onScrollTargetHandled?: (messageId: string) => void
 }
 
 function stripUnreadTabPrefix(title: string): string {
   return title.replace(/^\(\d+\)\s+/, '')
+}
+
+function classifyChatMessage(author: string, whisper: boolean) {
+  if (whisper) return 'whisper'
+  const who = author.trim().toLowerCase()
+  if (who === 'narrador' || who === 'dm') return 'narrador'
+  if (who === 'sistema' || who === 'system') return 'system'
+  return 'player'
+}
+
+function renderTextWithNarratorMentions(text: string) {
+  const chunks = text.split(/(@(?:Narrador|DM)\b)/gi)
+  if (chunks.length === 1) return text
+  return chunks.map((chunk, idx) => {
+    if (/^@(narrador|dm)$/i.test(chunk)) {
+      return (
+        <span key={`mention-${idx}`} className="vtt-chat-mention-highlight">
+          {chunk}
+        </span>
+      )
+    }
+    return <span key={`text-${idx}`}>{chunk}</span>
+  })
+}
+
+function formatClock(ts: number) {
+  if (!Number.isFinite(ts)) return '--:--'
+  return new Date(ts).toLocaleTimeString('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function activityTone(kind: string) {
+  if (kind === 'dice') return 'vtt-chat-activity--dice'
+  if (kind === 'initiative') return 'vtt-chat-activity--initiative'
+  if (kind === 'scene') return 'vtt-chat-activity--scene'
+  if (kind === 'claim') return 'vtt-chat-activity--claim'
+  if (kind === 'chat') return 'vtt-chat-activity--chat'
+  return 'vtt-chat-activity--system'
 }
 
 export function ChatPanel({
@@ -37,6 +84,10 @@ export function ChatPanel({
   nestedInHud = false,
   dmSectionExpanded = true,
   onUnreadCountChange,
+  viewerRole,
+  viewerSessionId = null,
+  scrollToMessageId = null,
+  onScrollTargetHandled,
 }: ChatPanelProps) {
   const nestedDock = nestedInHud && layout === 'dock'
   /** Panel visible para el usuario (barra flotante o tarjeta del HUD abierta). */
@@ -51,6 +102,8 @@ export function ChatPanel({
   const [mentionStart, setMentionStart] = useState<number | null>(null)
   const [mentionFilter, setMentionFilter] = useState('')
   const [mentionHighlight, setMentionHighlight] = useState(0)
+  const [focusedMessageId, setFocusedMessageId] = useState<string | null>(null)
+  const messageRefs = useRef<Record<string, HTMLElement | null>>({})
 
   const targets = useMemo(() => getMentionTargetsFromRoom(roomState), [roomState])
   const mentionChoices = useMemo(
@@ -146,6 +199,18 @@ export function ChatPanel({
     setMentionHighlight(0)
   }, [mentionFilter, mentionChoices.length])
 
+  useEffect(() => {
+    if (!scrollToMessageId) return
+    if (!openForReading) return
+    const node = messageRefs.current[scrollToMessageId]
+    if (!node) return
+    node.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setFocusedMessageId(scrollToMessageId)
+    onScrollTargetHandled?.(scrollToMessageId)
+    const t = window.setTimeout(() => setFocusedMessageId((prev) => (prev === scrollToMessageId ? null : prev)), 2200)
+    return () => window.clearTimeout(t)
+  }, [onScrollTargetHandled, openForReading, scrollToMessageId])
+
   const insertMention = useCallback(
     (label: string) => {
       const el = inputRef.current
@@ -221,22 +286,25 @@ export function ChatPanel({
           <span className="shrink-0 text-[var(--vtt-text-muted)]">{expanded ? '−' : '+'}</span>
         </button>
       ) : null}
-      {showMessages ? (
-        <>
+      <div className={`vtt-collapse ${showMessages ? 'is-open' : ''}`} aria-hidden={!showMessages}>
+        <div>
           {activity.length > 0 ? (
             <div
               className="max-h-28 overflow-y-auto border-b border-[var(--vtt-border-subtle)] px-3 py-2 text-[0.7rem] leading-snug text-[var(--vtt-text-muted)]"
               role="log"
               aria-label="Registro de actividad"
             >
-              {activity.map((a) => (
-                <p key={a.id} className="mb-1 break-words">
-                  <span className="font-mono text-[0.65rem] text-[var(--vtt-gold-dim)]">
-                    [{a.kind}]
-                  </span>{' '}
-                  {a.text}
-                </p>
-              ))}
+              <ol className="grid gap-1">
+                {activity.map((a) => (
+                  <li key={a.id} className={`vtt-chat-activity ${activityTone(a.kind)}`}>
+                    <span className="vtt-chat-activity__kind">{a.kind}</span>
+                    <span className="min-w-0 flex-1 break-words">{a.text}</span>
+                    <time className="vtt-chat-activity__time" dateTime={new Date(a.ts).toISOString()}>
+                      {formatClock(a.ts)}
+                    </time>
+                  </li>
+                ))}
+              </ol>
             </div>
           ) : null}
           <div
@@ -248,15 +316,71 @@ export function ChatPanel({
             {roomState.chatLog.length === 0 ? (
               <p className="text-xs text-[var(--vtt-text-muted)]">Sin mensajes aún.</p>
             ) : (
-              [...roomState.chatLog].map((m) => (
-                  <p key={m.id} className="mb-1.5 break-words leading-snug">
-                    <span className="font-semibold text-[var(--vtt-gold-dim)]">{m.author}:</span>{' '}
-                    <span className={`text-[var(--vtt-text)] ${m.whisper ? 'italic text-[var(--vtt-gold-dim)] opacity-90' : ''}`}>
-                      {m.whisper ? <strong className="text-[var(--vtt-forest)] text-xs mr-1">[Susurro]</strong> : null}
-                      {m.text}
+              [...roomState.chatLog].map((m) => {
+                const whisper = Boolean(m.whisper)
+                const tone = classifyChatMessage(m.author, whisper)
+                const mentions = m.mentions ?? []
+                const mentionsCurrentViewer =
+                  mentions.length > 0 &&
+                  (viewerRole === 'dm'
+                    ? mentions.includes(MENTION_DM_ID)
+                    : viewerRole === 'player' && viewerSessionId
+                      ? mentions.includes(viewerSessionId)
+                      : false)
+                return (
+                  <article
+                    key={m.id}
+                    ref={(el) => {
+                      messageRefs.current[m.id] = el
+                    }}
+                    className={`vtt-chat-message mb-1.5 break-words rounded-[var(--vtt-radius-sm)] px-2 py-1.5 leading-snug ${
+                      tone === 'narrador'
+                        ? 'vtt-chat-message--narrador'
+                        : tone === 'system'
+                          ? 'vtt-chat-message--system'
+                          : tone === 'whisper'
+                            ? 'vtt-chat-message--whisper'
+                            : 'vtt-chat-message--player'
+                    } ${mentionsCurrentViewer ? 'vtt-chat-message--mention-target' : ''} ${
+                      focusedMessageId === m.id ? 'vtt-chat-message--focus' : ''
+                    }`}
+                  >
+                    <div className="mb-0.5 flex items-center gap-1.5 text-[0.62rem] uppercase tracking-[0.08em] text-[var(--vtt-text-muted)]">
+                      <span className="font-semibold text-[var(--vtt-gold-dim)]">{m.author}</span>
+                      <span aria-hidden>•</span>
+                      <time dateTime={new Date(m.ts).toISOString()}>{formatClock(m.ts)}</time>
+                      {tone === 'system' ? <span className="vtt-chat-chip">Sistema</span> : null}
+                      {tone === 'whisper' ? <span className="vtt-chat-chip vtt-chat-chip--whisper">Susurro</span> : null}
+                    </div>
+                    <span
+                      className={`text-[var(--vtt-text)] ${whisper ? 'italic text-[var(--vtt-gold-dim)] opacity-95' : ''}`}
+                    >
+                      {whisper ? (
+                        <strong className="mr-1 text-xs text-[var(--vtt-forest)]">[Susurro]</strong>
+                      ) : null}
+                      {renderTextWithNarratorMentions(m.text)}
                     </span>
-                  </p>
-                ))
+                    {tone === 'narrador' ? (
+                      <span className="vtt-chat-chip ml-1.5">Narrador</span>
+                    ) : null}
+                    {tone === 'player' ? (
+                      <span className="vtt-chat-chip vtt-chat-chip--player ml-1.5">
+                        Jugador
+                      </span>
+                    ) : null}
+                    {mentions.length ? (
+                      <span className="vtt-chat-chip vtt-chat-chip--mention ml-1.5">
+                        {mentions.length} mención{mentions.length > 1 ? 'es' : ''}
+                      </span>
+                    ) : null}
+                    {mentionsCurrentViewer ? (
+                      <span className="vtt-chat-chip vtt-chat-chip--mention-target ml-1.5">
+                        Te menciona
+                      </span>
+                    ) : null}
+                  </article>
+                )
+              })
             )}
           </div>
           {readOnly ? (
@@ -278,7 +402,7 @@ export function ChatPanel({
                           type="button"
                           role="option"
                           aria-selected={i === mentionHighlight}
-                          className={`flex w-full px-2 py-1.5 text-left text-sm ${
+                          className={`flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left text-sm ${
                             i === mentionHighlight
                               ? 'bg-[var(--vtt-surface-warm)] text-[var(--vtt-text)]'
                               : 'text-[var(--vtt-text-muted)] hover:bg-[var(--vtt-surface-warm)]/80'
@@ -287,7 +411,12 @@ export function ChatPanel({
                           onMouseEnter={() => setMentionHighlight(i)}
                           onClick={() => insertMention(t.label)}
                         >
-                          @{t.label}
+                          <span className="truncate">@{t.label}</span>
+                          {i === mentionHighlight ? (
+                            <span className="shrink-0 text-[0.62rem] uppercase tracking-[0.08em] text-[var(--vtt-gold-dim)]">
+                              Enter
+                            </span>
+                          ) : null}
                         </button>
                       </li>
                     ))}
@@ -344,8 +473,8 @@ export function ChatPanel({
               </button>
             </div>
           )}
-        </>
-      ) : null}
+        </div>
+      </div>
     </section>
   )
 }

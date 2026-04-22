@@ -34,6 +34,7 @@ export type TokensLayerProps = {
   gridSize: number
   snapToGrid: boolean
   showTokenNames: boolean
+  activeTurnTokenId?: string | null
   /** Manos levantadas (ids de sesión); badge solo si el DM debe verlas. */
   raisedHands?: string[]
   showRaiseHandForDm?: boolean
@@ -56,6 +57,7 @@ export function TokensLayer({
   gridSize,
   snapToGrid,
   showTokenNames,
+  activeTurnTokenId = null,
   raisedHands = [],
   showRaiseHandForDm = false,
 }: TokensLayerProps) {
@@ -295,6 +297,8 @@ export function TokensLayer({
           token={t}
           showNameLabel={showTokenNames}
           isDragging={draggingId === t.id}
+          isActiveTurn={activeTurnTokenId === t.id}
+          isIdleCandidate={canDragToken(t) && draggingId !== t.id}
           canDrag={canDragToken(t)}
           onPointerDown={onTokenPointerDown}
           onKeyDown={onTokenKeyDown}
@@ -315,6 +319,8 @@ export function TokensLayer({
               token={{ ...t, x: ghost.x, y: ghost.y }}
               showNameLabel={false}
               isDragging={false}
+              isActiveTurn={false}
+              isIdleCandidate={false}
               canDrag={false}
               onPointerDown={() => {}}
               reactionBurst={null}

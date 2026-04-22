@@ -184,7 +184,7 @@ export function DicePanel({
             {recentRolls.length === 0 ? (
               <p className="mt-1 text-xs text-[var(--vtt-text-muted)]">Aún no hay tiradas.</p>
             ) : (
-              <ol className="mt-2 grid max-h-40 gap-1 overflow-auto pr-1">
+              <ol className="mt-2 grid max-h-48 gap-2 overflow-auto pr-1">
                 {recentRolls.map((roll) => {
                   const isOwnSecretPlayer =
                     Boolean(roll.secret) &&
@@ -192,28 +192,54 @@ export function DicePanel({
                     playerSessionId &&
                     roll.playerSessionId === playerSessionId
                   const showDmSecretBadge = Boolean(roll.secret) && isDm
+                  const isNat20 = roll.dieType === 'd20' && roll.total === 20
+                  const isNat1 = roll.dieType === 'd20' && roll.total === 1
                   return (
                     <li
                       key={roll.id}
-                      className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] px-2 py-1 text-xs text-[var(--vtt-text)]"
+                      className={`vtt-dice-history-card rounded-[var(--vtt-radius-sm)] border px-2.5 py-2 text-xs text-[var(--vtt-text)] ${
+                        isNat20
+                          ? 'vtt-dice-history-card--nat20'
+                          : isNat1
+                            ? 'vtt-dice-history-card--nat1'
+                            : 'border-[var(--vtt-border-subtle)]'
+                      }`}
                     >
-                      <span className="font-semibold text-[var(--vtt-gold)]">{roll.roller}</span>{' '}
-                      tira {roll.dieType} ({modeLabel(roll.mode)}):{' '}
-                      {roll.rolls.length > 1 ? `${roll.rolls.join('/')} → ` : ''}
-                      <span className="font-semibold">{roll.total}</span>
-                      {showDmSecretBadge ? (
-                        <span
-                          className="ml-1.5 inline-block rounded-sm border border-[var(--vtt-gold-dim)] bg-[var(--vtt-surface-warm)] px-1.5 py-0.5 font-vtt-display text-[0.6rem] font-semibold uppercase tracking-wide text-[var(--vtt-gold)]"
-                          title="Los demás jugadores no ven esta tirada en el historial"
-                        >
-                          Oculta
-                        </span>
-                      ) : null}
-                      {isOwnSecretPlayer ? (
-                        <span className="ml-1 text-[0.65rem] text-[var(--vtt-text-muted)]">
-                          (no visible para el resto)
-                        </span>
-                      ) : null}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--vtt-gold-dim)]">
+                            {roll.roller}
+                          </p>
+                          <p className="mt-0.5 text-[0.72rem] text-[var(--vtt-text-muted)]">
+                            {roll.dieType} · {modeLabel(roll.mode)}
+                            {roll.rolls.length > 1 ? ` · ${roll.rolls.join(' / ')}` : ''}
+                          </p>
+                        </div>
+                        <div className="vtt-dice-history-card__total shrink-0">
+                          <span>{roll.total}</span>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        {showDmSecretBadge ? (
+                          <span
+                            className="inline-block rounded-sm border border-[var(--vtt-gold-dim)] bg-[var(--vtt-surface-warm)] px-1.5 py-0.5 font-vtt-display text-[0.6rem] font-semibold uppercase tracking-wide text-[var(--vtt-gold)]"
+                            title="Los demás jugadores no ven esta tirada en el historial"
+                          >
+                            Oculta
+                          </span>
+                        ) : null}
+                        {isOwnSecretPlayer ? (
+                          <span className="text-[0.65rem] text-[var(--vtt-text-muted)]">
+                            No visible para el resto
+                          </span>
+                        ) : null}
+                        {isNat20 ? <span className="vtt-dice-history-card__tag">Nat 20</span> : null}
+                        {isNat1 ? (
+                          <span className="vtt-dice-history-card__tag vtt-dice-history-card__tag--bad">
+                            Nat 1
+                          </span>
+                        ) : null}
+                      </div>
                     </li>
                   )
                 })}

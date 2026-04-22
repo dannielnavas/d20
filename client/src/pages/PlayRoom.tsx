@@ -23,7 +23,22 @@ import { usePlayRoomSocket } from '../hooks/playroom/usePlayRoomSocket'
 import { useRollFx } from '../hooks/playroom/useRollFx'
 import { usePlayerSessionId } from '../hooks/usePlayerSessionId'
 import type { Token } from '../types/room'
+import { playNat1Sound, playNat20Sound } from '../utils/audioFx'
 import { allPlayerCharacters, findTokenInRoomState } from '../utils/roomTokens'
+
+const EPIC_LOADING_LINES = [
+  'Preparando la mazmorra…',
+  'Invocando goblins…',
+  'Tirando iniciativa…',
+  'Bendiciendo los dados…',
+  'Desplegando el tablero…',
+] as const
+
+function modeLabelFallback(mode: 'normal' | 'advantage' | 'disadvantage') {
+  if (mode === 'advantage') return 'Ventaja'
+  if (mode === 'disadvantage') return 'Desventaja'
+  return 'Normal'
+}
 
 export function PlayRoom() {
   const { roomId = '' } = useParams<{ roomId: string }>()
@@ -92,10 +107,12 @@ export function PlayRoom() {
   const [notificationPermission, setNotificationPermission] = useState<
     NotificationPermission | 'unsupported'
   >(() => (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'))
+  const [loadingLineIndex, setLoadingLineIndex] = useState(0)
 
   useInitiativeTurnNotify(state, session)
 
   const [chatExpanded, setChatExpanded] = useState(true)
+  const [chatScrollToMessageId, setChatScrollToMessageId] = useState<string | null>(null)
   const { toast: mentionToast, dismissToast: dismissMentionToast } = useChatMentionNotify(
     state,
     session,
@@ -120,6 +137,14 @@ export function PlayRoom() {
       setPasswordInput(appliedSessionPassword)
     }
   }, [appliedSessionPassword, passwordGate])
+
+  useEffect(() => {
+    if (passwordGate || (joinPayload && state && session)) return
+    const timer = window.setInterval(() => {
+      setLoadingLineIndex((current) => (current + 1) % EPIC_LOADING_LINES.length)
+    }, 2100)
+    return () => window.clearInterval(timer)
+  }, [joinPayload, passwordGate, session, state])
 
   const submitSessionPassword = useCallback(() => {
     if (!roomId) return
@@ -247,6 +272,25 @@ export function PlayRoom() {
     rollFxReveal && rollFx && rollFx.dieType === 'd20' && rollFx.total === 1,
   )
 
+  useEffect(() => {
+    if (!rollFxReveal || !rollFx || rollFx.dieType !== 'd20') return
+    if (rollFx.total === 20) {
+      playNat20Sound()
+      return
+    }
+    if (rollFx.total === 1) playNat1Sound()
+  }, [rollFx, rollFxReveal])
+
+  const showEpicLoading = !error && !passwordGate && (!joinPayload || !state || !session)
+  const loadingLead = !joinPayload
+    ? 'Afinando tu acceso a la mesa'
+    : !state
+      ? 'Abriendo los sellos de la sala'
+      : !session
+        ? 'Tomando asiento en la mesa'
+        : 'Preparando la escena'
+  const loadingLine = EPIC_LOADING_LINES[loadingLineIndex] ?? EPIC_LOADING_LINES[0]
+
   return (
     <div className="font-vtt-body flex min-h-svh flex-col gap-4 px-4 py-4 text-left md:px-6">
       <a href="#contenido-sala" className="skip-link">
@@ -349,13 +393,37 @@ export function PlayRoom() {
           showMap || (showLobby && session?.role === 'player') ? 'pb-28' : ''
         }`}
       >
+        {showEpicLoading ? (
+          <div className="vtt-loading-epic" role="status" aria-live="polite" aria-atomic="true">
+            <div className="vtt-loading-epic__veil" aria-hidden="true" />
+            <div className="vtt-loading-epic__panel vtt-glass vtt-metal-frame vtt-depth-3">
+              <div className="vtt-loading-epic__sigil" aria-hidden="true">
+                <div className="vtt-loading-epic__ring vtt-loading-epic__ring--outer" />
+                <div className="vtt-loading-epic__ring vtt-loading-epic__ring--inner" />
+                <div className="vtt-loading-epic__core">d20</div>
+              </div>
+              <p className="vtt-loading-epic__eyebrow">{loadingLead}</p>
+              <h2 className="vtt-loading-epic__line">{loadingLine}</h2>
+              <p className="vtt-loading-epic__hint">
+                El Narrador está reuniendo mapa, fichas y secretos antes de abrir el telón.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         {state && turnTimer ? (
           <TurnTimerHud remaining={turnTimer.remaining} totalSeconds={turnTimer.totalSeconds} />
         ) : null}
 
         {rollFx ? (
-          <div className="dice-roll-overlay" aria-hidden="true">
+          <div
+            className={`dice-roll-overlay ${isCriticalD20 ? 'dice-roll-overlay--nat20' : ''} ${isCriticalFailD20 ? 'dice-roll-overlay--nat1' : ''}`}
+            aria-hidden="true"
+          >
             <div className="dice-roll-overlay__panel">
+              <div className="dice-roll-overlay__spark dice-roll-overlay__spark--a" />
+              <div className="dice-roll-overlay__spark dice-roll-overlay__spark--b" />
+              <div className="dice-roll-overlay__spark dice-roll-overlay__spark--c" />
               <p className="dice-roll-overlay__title">
                 {rollFxReveal ? 'Resultado' : 'Tirada en curso'}
               </p>
@@ -375,6 +443,11 @@ export function PlayRoom() {
                   {isCriticalFailD20 ? (
                     <p className="dice-roll-overlay__critical-fail">Pifia</p>
                   ) : null}
+                  <p className="dice-roll-overlay__subtitle">
+                    {rollFx.rolls.length > 1
+                      ? `Dados: ${rollFx.rolls.join(' / ')}`
+                      : modeLabelFallback(rollFx.mode)}
+                  </p>
                   <p className="dice-roll-overlay__value">
                     {rollFx.roller}: {rollFx.dieType} = {rollFx.total}
                   </p>
@@ -441,12 +514,6 @@ export function PlayRoom() {
           </div>
         ) : null}
 
-        {!joinPayload && (
-          <p className="text-sm text-[var(--vtt-text-muted)]" role="status">
-            Preparando tu acceso…
-          </p>
-        )}
-
         {socket && session && state && (showLobby || showMap) ? (
           <div className={showMap ? 'contents' : 'w-full max-w-6xl shrink-0 px-0'}>
             <MediaDock
@@ -496,6 +563,10 @@ export function PlayRoom() {
             timerActive={turnTimer !== null}
             chatExpanded={chatExpanded}
             onChatExpandedChange={setChatExpanded}
+            chatScrollToMessageId={chatScrollToMessageId}
+            onChatScrollHandled={(messageId) => {
+              setChatScrollToMessageId((prev) => (prev === messageId ? null : prev))
+            }}
             initiativeTokens={allPlayerCharacters(state)}
             onInitiativeToggleVisibility={onInitiativeToggleVisibility}
             onInitiativeMove={onInitiativeMove}
@@ -514,6 +585,10 @@ export function PlayRoom() {
             privateNotesPlayerPair={privateNotesPlayerPair}
             chatExpanded={chatExpanded}
             onChatExpandedChange={setChatExpanded}
+            chatScrollToMessageId={chatScrollToMessageId}
+            onChatScrollHandled={(messageId) => {
+              setChatScrollToMessageId((prev) => (prev === messageId ? null : prev))
+            }}
             initiativeTokens={allPlayerCharacters(state)}
             playerSessionId={playerSessionId}
             canRequestRoll={Boolean(session.claimedTokenId)}
@@ -529,6 +604,11 @@ export function PlayRoom() {
             readOnly={true}
             expanded={chatExpanded}
             onExpandedChange={setChatExpanded}
+            viewerRole="spectator"
+            scrollToMessageId={chatScrollToMessageId}
+            onScrollTargetHandled={(messageId) => {
+              setChatScrollToMessageId((prev) => (prev === messageId ? null : prev))
+            }}
           />
         ) : null}
 
@@ -613,6 +693,7 @@ export function PlayRoom() {
                 type="button"
                 className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] px-2 py-1 text-xs font-semibold text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold)] hover:text-[var(--vtt-text)]"
                 onClick={() => {
+                  setChatScrollToMessageId(mentionToast.messageId)
                   dismissMentionToast()
                   setChatExpanded(true)
                 }}
@@ -683,18 +764,6 @@ export function PlayRoom() {
             floatingSide="right"
           />
         ) : null}
-
-        {joinPayload && state && !session && (
-          <p className="text-sm text-[var(--vtt-text-muted)]" role="status" aria-live="polite">
-            Preparando tu lugar en la mesa…
-          </p>
-        )}
-
-        {joinPayload && !state && !error && (
-          <p className="text-sm text-[var(--vtt-text-muted)]" role="status" aria-live="polite">
-            Cargando la mesa…
-          </p>
-        )}
 
         {import.meta.env.DEV && state && showMap ? (
           <details className="vtt-surface vtt-glow-border w-full max-w-4xl shrink-0 overflow-hidden">

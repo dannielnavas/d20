@@ -8,6 +8,8 @@ export type TokenSpriteProps = {
   /** Nombre bajo el avatar (controlado por ajustes de sala). */
   showNameLabel: boolean
   isDragging: boolean
+  isActiveTurn?: boolean
+  isIdleCandidate?: boolean
   canDrag: boolean
   onPointerDown: (e: ReactPointerEvent<HTMLDivElement | HTMLButtonElement>, token: Token) => void
   onKeyDown?: (e: ReactKeyboardEvent<HTMLButtonElement>, token: Token) => void
@@ -23,6 +25,8 @@ export function TokenSprite({
   token,
   showNameLabel,
   isDragging,
+  isActiveTurn = false,
+  isIdleCandidate = false,
   canDrag,
   onPointerDown,
   onKeyDown,
@@ -49,13 +53,14 @@ export function TokenSprite({
   const hpTemp = Math.max(0, token.hitPointsTemp ?? 0)
   const currentPct = hpMax > 0 ? Math.max(0, Math.min(100, (hpCurrent / hpMax) * 100)) : 0
   const tempPct = hpMax > 0 ? Math.max(0, Math.min(100 - currentPct, (hpTemp / hpMax) * 100)) : 0
+  const tokenBorderColor = token.frameColor ?? 'var(--vtt-border)'
 
-  const circleClass = `relative touch-none rounded-full border-2 border-[var(--vtt-border)] bg-[var(--vtt-surface)] shadow-[0_4px_14px_rgba(0,0,0,0.45)] focus-visible:z-[1001] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vtt-gold)] ${
+  const circleClass = `relative touch-none rounded-full border-2 border-[var(--vtt-border)] bg-[var(--vtt-surface)] focus-visible:z-[1001] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--vtt-gold)] ${
     isGhost
-      ? 'z-[9] opacity-40 ring-2 ring-[var(--vtt-gold)]/60 ring-offset-1 ring-offset-transparent animate-pulse'
+      ? 'vtt-token-shell z-[9] opacity-40 ring-2 ring-[var(--vtt-gold)]/60 ring-offset-1 ring-offset-transparent animate-pulse'
       : isDragging
-        ? 'z-[1000] scale-105 ring-2 ring-[var(--vtt-gold)] ring-offset-2 ring-offset-[var(--vtt-bg)]'
-        : 'z-[10]'
+        ? 'vtt-token-shell z-[1000] scale-105 ring-2 ring-[var(--vtt-gold)] ring-offset-2 ring-offset-[var(--vtt-bg)]'
+        : `vtt-token-shell z-[10] ${isActiveTurn ? 'vtt-token-shell--active' : ''} ${isIdleCandidate ? 'vtt-token-shell--idle' : ''}`
   }`
 
   const nameBlock = showNameLabel ? (
@@ -69,22 +74,22 @@ export function TokenSprite({
 
   const hpBlock =
     hpMax > 0 || hpCurrent > 0 || hpTemp > 0 ? (
-      <div className="mt-1 w-[min(5.25rem,16vw)]" aria-hidden>
-        <div className="overflow-hidden rounded-full border border-black/40 bg-black/65 shadow-[0_3px_10px_rgba(0,0,0,0.3)]">
-          <div className="relative h-2 w-full bg-[rgba(90,26,26,0.85)]">
+      <div className="vtt-token-hp mt-1 w-[min(5.9rem,18vw)]" aria-hidden>
+        <div className="vtt-token-hp__frame overflow-hidden rounded-full">
+          <div className="vtt-token-hp__track relative h-2.5 w-full">
             <div
-              className="absolute inset-y-0 left-0 bg-[linear-gradient(90deg,#8b2f22,#d96a3f)]"
+              className="vtt-token-hp__fill absolute inset-y-0 left-0"
               style={{ width: `${currentPct}%` }}
             />
             {tempPct > 0 ? (
               <div
-                className="absolute inset-y-0 bg-[linear-gradient(90deg,#70b7c5,#d4f0f5)]"
+                className="vtt-token-hp__temp absolute inset-y-0"
                 style={{ left: `${currentPct}%`, width: `${tempPct}%` }}
               />
             ) : null}
           </div>
         </div>
-        <p className="mt-0.5 text-center font-vtt-display text-[0.52rem] font-semibold uppercase tracking-[0.12em] text-[var(--vtt-text)] drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+        <p className="vtt-token-hp__label mt-0.5 text-center font-vtt-display text-[0.52rem] font-semibold uppercase tracking-[0.12em] text-[var(--vtt-text)] drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
           {hpCurrent}/{hpMax}
           {hpTemp > 0 ? ` +${hpTemp}` : ''}
         </p>
@@ -173,8 +178,9 @@ export function TokenSprite({
       >
         <div
           className={`vtt-token ${circleClass} pointer-events-none`}
-          style={{ ...circleStyle, borderColor: token.frameColor ?? 'var(--vtt-border)' }}
+          style={{ ...circleStyle, borderColor: tokenBorderColor }}
         >
+          {isActiveTurn ? <span className="vtt-token-turn-aura" aria-hidden /> : null}
           {inner}
         </div>
       </div>
@@ -192,7 +198,7 @@ export function TokenSprite({
           aria-label={`${token.name}, ${kind}.${conditionsAria} Usa flechas para mover; Mayús aumenta el paso.`}
           title={`${token.name} — arrastra o usa flechas para mover`}
           className={`vtt-token ${circleClass} pointer-events-auto cursor-grab active:cursor-grabbing`}
-          style={{ ...circleStyle, borderColor: token.frameColor ?? 'var(--vtt-border)' }}
+          style={{ ...circleStyle, borderColor: tokenBorderColor }}
           onPointerDown={(e) => {
             if (e.pointerType === 'mouse' && e.button !== 0) return
             onPointerDown(e, token)
@@ -201,6 +207,7 @@ export function TokenSprite({
           onTouchMove={(e) => e.stopPropagation()}
           onKeyDown={onKeyDown ? (e) => onKeyDown(e, token) : undefined}
         >
+          {isActiveTurn ? <span className="vtt-token-turn-aura" aria-hidden /> : null}
           {inner}
         </button>
         {hpBlock}
@@ -219,8 +226,9 @@ export function TokenSprite({
         aria-label={`${token.name}, ${kind}.${conditionsAria}`}
         title={`${token.name} — no puedes moverlo`}
         className={`vtt-token ${circleClass} pointer-events-none opacity-75`}
-        style={{ ...circleStyle, borderColor: token.frameColor ?? 'var(--vtt-border)' }}
+        style={{ ...circleStyle, borderColor: tokenBorderColor }}
       >
+        {isActiveTurn ? <span className="vtt-token-turn-aura" aria-hidden /> : null}
         {inner}
       </div>
       {hpBlock}

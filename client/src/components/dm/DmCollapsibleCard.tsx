@@ -65,13 +65,14 @@ export function DmCollapsibleCard({
 
   return (
     <section
-      className={`vtt-surface vtt-glow-border flex w-full flex-col overflow-hidden rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 shadow-lg backdrop-blur-sm ${className}`}
+      className={`vtt-collapsible-shell vtt-surface vtt-glow-border flex w-full flex-col overflow-hidden rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 shadow-lg backdrop-blur-sm ${className}`}
       aria-label={title}
+      data-expanded={expanded ? 'true' : 'false'}
     >
       <button
         type="button"
         id={labelId}
-        className="flex w-full items-center justify-between gap-2 border-b border-[var(--vtt-border-subtle)] px-3 py-2 text-left font-vtt-display text-xs font-semibold uppercase tracking-wide text-[var(--vtt-gold)] hover:bg-[var(--vtt-surface-warm)]/60"
+        className="vtt-collapsible-trigger flex w-full items-center justify-between gap-2 border-b border-[var(--vtt-border-subtle)] px-3 py-2 text-left font-vtt-display text-xs font-semibold uppercase tracking-wide text-[var(--vtt-gold)] hover:bg-[var(--vtt-surface-warm)]/60"
         onClick={toggle}
         aria-expanded={expanded}
         aria-controls={`${labelId}-panel`}
@@ -84,12 +85,17 @@ export function DmCollapsibleCard({
             </span>
           ) : null}
         </span>
-        <span className="shrink-0 text-[var(--vtt-text-muted)]" aria-hidden>
-          {expanded ? '−' : '+'}
+        <span className="vtt-collapsible-chevron shrink-0 text-[var(--vtt-text-muted)]" aria-hidden>
+          ▾
         </span>
       </button>
-      <div id={`${labelId}-panel`} className={bodyClassName || 'min-w-0'} hidden={!expanded}>
-        {children}
+      <div
+        id={`${labelId}-panel`}
+        className={`vtt-collapsible-panel vtt-collapse ${expanded ? 'is-open' : ''}`}
+        data-open={expanded ? 'true' : 'false'}
+        aria-hidden={!expanded}
+      >
+        <div className={bodyClassName || 'min-w-0'}>{children}</div>
       </div>
     </section>
   )

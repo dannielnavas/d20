@@ -120,6 +120,7 @@ export function MapBoard({
   const { backgroundUrl, backgroundType, mapAudioEnabled } = roomState.settings
   const mapVolume = Math.min(100, Math.max(0, Math.round(roomState.settings.mapVolume ?? 70)))
   const [dims, setDims] = useState({ w: DEFAULT_W, h: DEFAULT_H })
+  const [parallaxOffset, setParallaxOffset] = useState({ x: 0, y: 0 })
   const viewportRef = useRef<HTMLDivElement | null>(null)
   const ytPlayerRef = useRef<YoutubeMapPlayer | null>(null)
   const rawYtFrameId = useId()
@@ -321,6 +322,21 @@ export function MapBoard({
     [boardDims.h, boardDims.w],
   )
 
+  const onBoardPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    if (!rect.width || !rect.height) return
+    const relX = (e.clientX - rect.left) / rect.width - 0.5
+    const relY = (e.clientY - rect.top) / rect.height - 0.5
+    setParallaxOffset({
+      x: Number((relX * 10).toFixed(2)),
+      y: Number((relY * 8).toFixed(2)),
+    })
+  }, [])
+
+  const resetParallax = useCallback(() => {
+    setParallaxOffset({ x: 0, y: 0 })
+  }, [])
+
   return (
     <section
       className="flex min-h-0 w-full flex-1 flex-col gap-4"
@@ -372,13 +388,22 @@ export function MapBoard({
               : 'Rueda o pellizco para zoom en el mapa. Arrastra tu ficha con el dedo o el ratón; Mayús+clic en el mapa para ping. Reacciones en el panel de herramientas a la izquierda. El fondo se mueve desde las zonas vacías.'}
           </p>
           <div
-            className="relative min-h-[min(70svh,720px)] w-full flex-1 overflow-hidden rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[#040302] shadow-[inset_0_0_80px_rgba(0,0,0,0.55)]"
-            style={{ backgroundColor: 'var(--dm-map-chrome, #040302)' }}
+            className="vtt-map-premium-frame relative min-h-[min(70svh,720px)] w-full flex-1 overflow-hidden rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[#040302] shadow-[inset_0_0_80px_rgba(0,0,0,0.55)]"
+            style={{
+              backgroundColor: 'var(--dm-map-chrome, #040302)',
+              ['--vtt-board-parallax-x' as string]: `${parallaxOffset.x}px`,
+              ['--vtt-board-parallax-y' as string]: `${parallaxOffset.y}px`,
+            }}
             role="application"
             aria-roledescription="lienzo del tablero"
             aria-describedby={mapBoardA11yId}
             aria-label="Mapa: zoom con la rueda o con dos dedos; arrastre con un dedo o el ratón para desplazar el lienzo; Tab para enfocar fichas."
+            onPointerMove={onBoardPointerMove}
+            onPointerLeave={resetParallax}
           >
+            <div className="vtt-map-premium-frame__grain" aria-hidden="true" />
+            <div className="vtt-map-premium-frame__corners" aria-hidden="true" />
+            <div className="vtt-map-premium-frame__vignette" aria-hidden="true" />
             <p id={mapBoardA11yId} className="sr-only">
               Tab para enfocar fichas que puedas mover. Las flechas mueven la ficha enfocada. Mayús
               aumenta el paso. Arrastra con el dedo o el puntero para mover una ficha. Dos dedos en
@@ -409,14 +434,14 @@ export function MapBoard({
                 >
                   <div
                     key={roomState.activeSceneId}
-                    className="vtt-scene-enter relative h-full w-full"
+                    className="vtt-map-depth-stage vtt-scene-enter relative h-full w-full"
                   >
                     {hasMedia && backgroundType === 'video' && youtubeParsed && ytEmbedSrc ? (
                       <iframe
                         key={backgroundUrl}
                         id={ytIframeId}
                         title="Vídeo de mapa (YouTube)"
-                        className="pointer-events-none absolute inset-0 h-full w-full border-0 object-contain"
+                        className="vtt-map-parallax-layer pointer-events-none absolute inset-0 h-full w-full border-0 object-contain"
                         src={ytEmbedSrc}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen={false}
@@ -441,12 +466,13 @@ export function MapBoard({
                         alt=""
                         role="presentation"
                         draggable={false}
-                        className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+                        className="vtt-map-parallax-layer pointer-events-none absolute inset-0 h-full w-full object-contain"
                         src={backgroundUrl}
                         onLoad={onImgLoad}
                         onError={onImgError}
                       />
                     ) : null}
+                    <div className="vtt-map-depth-grid absolute inset-0" aria-hidden="true" />
                     {!hasMedia ? (
                       <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--vtt-bg-elevated)] text-center">
                         <p className="font-vtt-display text-sm font-semibold tracking-wide text-[var(--vtt-gold)]">
@@ -480,6 +506,11 @@ export function MapBoard({
                       gridSize={roomState.settings.gridSize}
                       snapToGrid={roomState.settings.snapToGrid}
                       showTokenNames={roomState.settings.showTokenNames !== false}
+                      activeTurnTokenId={
+                        roomState.initiative.currentIndex !== null
+                          ? (roomState.initiative.order[roomState.initiative.currentIndex] ?? null)
+                          : null
+                      }
                       raisedHands={roomState.raisedHands ?? []}
                       showRaiseHandForDm={isDm}
                     />
