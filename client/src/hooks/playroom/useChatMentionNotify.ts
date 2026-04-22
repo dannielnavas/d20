@@ -45,8 +45,13 @@ export function useChatMentionNotify(
   session: SessionState | null,
   playerSessionId: string | null,
   chatExpanded: boolean,
-): { toast: { messageId: string; author: string; preview: string } | null; dismissToast: () => void } {
-  const [toast, setToast] = useState<{ messageId: string; author: string; preview: string } | null>(null)
+): {
+  toast: { messageId: string; author: string; preview: string } | null
+  dismissToast: () => void
+} {
+  const [toast, setToast] = useState<{ messageId: string; author: string; preview: string } | null>(
+    null,
+  )
   const lastHandledId = useRef<string | null>(null)
 
   useEffect(() => {

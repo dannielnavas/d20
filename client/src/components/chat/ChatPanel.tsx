@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Socket } from 'socket.io-client'
 import type { RoomState } from '../../types/room'
-import { MENTION_DM_ID } from '../../utils/chatMentions'
-import { filterMentionTargets, getMentionTargetsFromRoom } from '../../utils/chatMentions'
+import {
+  filterMentionTargets,
+  getMentionTargetsFromRoom,
+  MENTION_DM_ID,
+} from '../../utils/chatMentions'
 
 export type ChatPanelProps = {
   socket: Socket
@@ -207,7 +210,10 @@ export function ChatPanel({
     node.scrollIntoView({ behavior: 'smooth', block: 'center' })
     setFocusedMessageId(scrollToMessageId)
     onScrollTargetHandled?.(scrollToMessageId)
-    const t = window.setTimeout(() => setFocusedMessageId((prev) => (prev === scrollToMessageId ? null : prev)), 2200)
+    const t = window.setTimeout(
+      () => setFocusedMessageId((prev) => (prev === scrollToMessageId ? null : prev)),
+      2200,
+    )
     return () => window.clearTimeout(t)
   }, [onScrollTargetHandled, openForReading, scrollToMessageId])
 
@@ -299,7 +305,10 @@ export function ChatPanel({
                   <li key={a.id} className={`vtt-chat-activity ${activityTone(a.kind)}`}>
                     <span className="vtt-chat-activity__kind">{a.kind}</span>
                     <span className="min-w-0 flex-1 break-words">{a.text}</span>
-                    <time className="vtt-chat-activity__time" dateTime={new Date(a.ts).toISOString()}>
+                    <time
+                      className="vtt-chat-activity__time"
+                      dateTime={new Date(a.ts).toISOString()}
+                    >
                       {formatClock(a.ts)}
                     </time>
                   </li>
@@ -350,7 +359,9 @@ export function ChatPanel({
                       <span aria-hidden>•</span>
                       <time dateTime={new Date(m.ts).toISOString()}>{formatClock(m.ts)}</time>
                       {tone === 'system' ? <span className="vtt-chat-chip">Sistema</span> : null}
-                      {tone === 'whisper' ? <span className="vtt-chat-chip vtt-chat-chip--whisper">Susurro</span> : null}
+                      {tone === 'whisper' ? (
+                        <span className="vtt-chat-chip vtt-chat-chip--whisper">Susurro</span>
+                      ) : null}
                     </div>
                     <span
                       className={`text-[var(--vtt-text)] ${whisper ? 'italic text-[var(--vtt-gold-dim)] opacity-95' : ''}`}
@@ -364,9 +375,7 @@ export function ChatPanel({
                       <span className="vtt-chat-chip ml-1.5">Narrador</span>
                     ) : null}
                     {tone === 'player' ? (
-                      <span className="vtt-chat-chip vtt-chat-chip--player ml-1.5">
-                        Jugador
-                      </span>
+                      <span className="vtt-chat-chip vtt-chat-chip--player ml-1.5">Jugador</span>
                     ) : null}
                     {mentions.length ? (
                       <span className="vtt-chat-chip vtt-chat-chip--mention ml-1.5">

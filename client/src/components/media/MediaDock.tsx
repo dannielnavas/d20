@@ -92,11 +92,16 @@ function useSpeakingLevels(participants: ParticipantTile[]): Record<string, numb
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    const AudioCtx =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
     if (!AudioCtx) return
 
     const context = new AudioCtx()
-    const analysers = new Map<string, { analyser: AnalyserNode; data: Uint8Array; source: MediaStreamAudioSourceNode }>()
+    const analysers = new Map<
+      string,
+      { analyser: AnalyserNode; data: Uint8Array; source: MediaStreamAudioSourceNode }
+    >()
     let frameId = 0
     let cancelled = false
 
@@ -285,9 +290,16 @@ function VideoThumb({
           {showPortrait ? (
             <div className="vtt-media-thumb__portrait absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.07),transparent_28%),linear-gradient(180deg,rgba(20,16,12,0.9),rgba(8,7,6,0.98))]">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="vtt-media-thumb__portrait-img h-full w-full object-cover" />
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  className="vtt-media-thumb__portrait-img h-full w-full object-cover"
+                />
               ) : (
-                <span className="font-vtt-display text-xl uppercase tracking-[0.16em]" style={{ color: accent }}>
+                <span
+                  className="font-vtt-display text-xl uppercase tracking-[0.16em]"
+                  style={{ color: accent }}
+                >
                   {name.slice(0, 2)}
                 </span>
               )}
@@ -875,7 +887,9 @@ export function MediaDock({
                           isLeadSpeaker={activeSpeakerId === participant.id}
                           muted={participant.muted}
                           compact
-                          featured={activeSpeakerId === participant.id || narratorParticipants.length === 1}
+                          featured={
+                            activeSpeakerId === participant.id || narratorParticipants.length === 1
+                          }
                           handRaised={participant.id === 'local' ? localHandRaised : false}
                           isNarrator
                         />

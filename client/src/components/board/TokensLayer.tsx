@@ -9,11 +9,11 @@ import {
   type PointerEvent as ReactPointerEvent,
   type SetStateAction,
 } from 'react'
-import type { Socket } from 'socket.io-client'
 import { useTransformComponent } from 'react-zoom-pan-pinch'
-import { snapToGrid as snapWorld } from '../../utils/snapToGrid'
+import type { Socket } from 'socket.io-client'
 import type { RoomState, Token } from '../../types/room'
 import { mapTokensInActiveScene } from '../../utils/activeSceneTokens'
+import { snapToGrid as snapWorld } from '../../utils/snapToGrid'
 import { clientToWorld } from './clientToWorld'
 import { TokenSprite } from './TokenSprite'
 
@@ -82,7 +82,10 @@ export function TokensLayer({
       if (typeof p.x !== 'number' || typeof p.y !== 'number') return
       // Solo aplicar si NO somos nosotros los que arrastramos ese token
       if (dragRef.current?.tokenId === p.tokenId) return
-      setGhostPositions((prev) => ({ ...prev, [p.tokenId!]: { x: p.x as number, y: p.y as number } }))
+      setGhostPositions((prev) => ({
+        ...prev,
+        [p.tokenId!]: { x: p.x as number, y: p.y as number },
+      }))
       // Limpiar el fantasma si no llegan más eventos en 800ms (arrastre terminó)
       const existing = ghostClearTimers.current.get(p.tokenId!)
       if (existing) clearTimeout(existing)

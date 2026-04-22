@@ -233,7 +233,9 @@ export function DicePanel({
                             No visible para el resto
                           </span>
                         ) : null}
-                        {isNat20 ? <span className="vtt-dice-history-card__tag">Nat 20</span> : null}
+                        {isNat20 ? (
+                          <span className="vtt-dice-history-card__tag">Nat 20</span>
+                        ) : null}
                         {isNat1 ? (
                           <span className="vtt-dice-history-card__tag vtt-dice-history-card__tag--bad">
                             Nat 1
