@@ -72,7 +72,7 @@ export function DmCollapsibleCard({
       <button
         type="button"
         id={labelId}
-        className="vtt-collapsible-trigger flex w-full items-center justify-between gap-1.5 border-b border-[var(--vtt-border-subtle)] px-2.5 py-1.5 text-left font-vtt-display text-[0.66rem] font-semibold uppercase tracking-[0.06em] text-[var(--vtt-gold)] hover:bg-[var(--vtt-surface-warm)]/60"
+        className="vtt-collapsible-trigger flex min-h-11 w-full items-center justify-between gap-1.5 border-b border-[var(--vtt-border-subtle)] px-2.5 py-2 text-left font-vtt-display text-[0.68rem] font-semibold uppercase tracking-[0.07em] text-[var(--vtt-gold)] hover:bg-[var(--vtt-surface-warm)]/60"
         onClick={toggle}
         aria-expanded={expanded}
         aria-controls={`${labelId}-panel`}

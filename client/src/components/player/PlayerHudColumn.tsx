@@ -108,15 +108,20 @@ export function PlayerHudColumn({
       <div className="pointer-events-auto fixed right-2 top-[5.5rem] z-[90] sm:right-3 sm:top-24">
         <button
           type="button"
-          className="relative inline-flex items-center gap-1.5 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 px-2.5 py-1.5 font-vtt-display text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--vtt-gold)] shadow-md backdrop-blur-sm hover:border-[var(--vtt-gold-dim)]"
+          className="vtt-hud-toggle-btn"
           onClick={() => setDockOpen((prev) => !prev)}
           aria-expanded={dockOpen}
+          aria-controls="player-hud-column"
           aria-label={dockOpen ? 'Ocultar herramientas del jugador' : 'Mostrar herramientas del jugador'}
         >
-          <span aria-hidden>☰</span>
+          <span className="vtt-hud-toggle-btn__glyph" aria-hidden>
+            <span />
+            <span />
+            <span />
+          </span>
           Herramientas
           {menuBadgeCount > 0 ? (
-            <span className="inline-flex min-h-[1rem] min-w-[1rem] items-center justify-center rounded-full bg-[var(--vtt-ember)] px-1 text-[0.58rem] font-bold leading-none text-white">
+            <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-[var(--vtt-ember)] px-1 text-[0.62rem] font-bold leading-none text-white">
               {menuBadgeCount > 99 ? '99+' : menuBadgeCount}
             </span>
           ) : null}
@@ -125,6 +130,7 @@ export function PlayerHudColumn({
 
       {!dockOpen ? null : (
         <div
+          id="player-hud-column"
           className="vtt-hud-column fixed right-2 top-[8.15rem] z-[89] flex w-[min(17.5rem,calc(100vw-1rem))] max-h-[calc(100svh-8.2rem)] flex-col gap-1.5 overflow-y-auto pb-2 [scrollbar-gutter:stable] sm:right-3 sm:top-[8.6rem] sm:max-h-[calc(100svh-8.65rem)]"
           aria-label="Herramientas del jugador"
         >
@@ -176,6 +182,8 @@ export function PlayerHudColumn({
                     className={`h-8 w-8 rounded-full border-2 transition ${frameColorDraft === option.value ? 'scale-110 border-[var(--vtt-text)] shadow-[0_0_0_2px_rgba(255,255,255,0.08)]' : 'border-transparent opacity-85 hover:opacity-100'}`}
                     style={{ backgroundColor: option.value }}
                     title={option.label}
+                    aria-label={`Seleccionar color de marco: ${option.label}`}
+                    aria-pressed={frameColorDraft === option.value}
                     onClick={() => setFrameColorDraft(option.value)}
                   />
                 ))}

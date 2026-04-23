@@ -76,7 +76,7 @@ export function DmHudColumn({
   }, [])
 
   // Escuchar confirmación del servidor de que el snapshot fue borrado
-  useCallback(() => {
+  useEffect(() => {
     socket.on('snapshotCleared', () => {
       setClearDone(true)
       setClearConfirm(false)
@@ -85,7 +85,7 @@ export function DmHudColumn({
     return () => {
       socket.off('snapshotCleared')
     }
-  }, [socket])()
+  }, [socket])
 
   const chatBadge = useMemo(() => {
     if (chatUnread <= 0) return undefined
@@ -216,15 +216,20 @@ export function DmHudColumn({
       <div className="pointer-events-auto fixed right-2 top-[5.5rem] z-[90] sm:right-3 sm:top-24">
         <button
           type="button"
-          className="relative inline-flex items-center gap-1.5 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 px-2.5 py-1.5 font-vtt-display text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--vtt-gold)] shadow-md backdrop-blur-sm hover:border-[var(--vtt-gold-dim)]"
+          className="vtt-hud-toggle-btn"
           onClick={() => setDockOpen((prev) => !prev)}
           aria-expanded={dockOpen}
+          aria-controls="dm-hud-column"
           aria-label={dockOpen ? 'Ocultar herramientas del Narrador' : 'Mostrar herramientas del Narrador'}
         >
-          <span aria-hidden>☰</span>
+          <span className="vtt-hud-toggle-btn__glyph" aria-hidden>
+            <span />
+            <span />
+            <span />
+          </span>
           Herramientas
           {menuBadgeCount > 0 ? (
-            <span className="inline-flex min-h-[1rem] min-w-[1rem] items-center justify-center rounded-full bg-[var(--vtt-ember)] px-1 text-[0.58rem] font-bold leading-none text-white">
+            <span className="inline-flex min-h-[1.1rem] min-w-[1.1rem] items-center justify-center rounded-full bg-[var(--vtt-ember)] px-1 text-[0.62rem] font-bold leading-none text-white">
               {menuBadgeCount > 99 ? '99+' : menuBadgeCount}
             </span>
           ) : null}
@@ -233,6 +238,7 @@ export function DmHudColumn({
 
       {!dockOpen ? null : (
       <div
+        id="dm-hud-column"
         className="vtt-hud-column fixed right-2 top-[8.15rem] z-[89] flex w-[min(17.5rem,calc(100vw-1rem))] max-h-[calc(100svh-8.2rem)] flex-col gap-1.5 overflow-y-auto pb-2 [scrollbar-gutter:stable] sm:right-3 sm:top-[8.6rem] sm:max-h-[calc(100svh-8.65rem)]"
         aria-label="Herramientas del Narrador"
       >
