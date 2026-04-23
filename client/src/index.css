@@ -468,6 +468,28 @@ html[data-theme='light'] {
     opacity: 0.88;
   }
 
+  .vtt-hud-toggle-badge {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 0 12px rgba(199, 92, 64, 0.4);
+    animation: vtt-hud-badge-pulse 1.6s ease-in-out infinite;
+  }
+
+  .vtt-collapsible-badge {
+    position: relative;
+    padding: 0.05rem 0.35rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(201, 164, 58, 0.24);
+    background: rgba(201, 164, 58, 0.08);
+    color: var(--vtt-gold-hover);
+    font-weight: 600;
+  }
+
+  .vtt-hud-column--floating {
+    transform-origin: top right;
+    animation: vtt-hud-column-pop 240ms var(--vtt-ease-premium) both;
+  }
+
   .vtt-media-filmstrip {
     scrollbar-width: thin;
     scrollbar-color: var(--vtt-gold-dim) transparent;
@@ -1955,6 +1977,35 @@ html[data-theme='light'] {
   }
 }
 
+@keyframes vtt-hud-column-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes vtt-hud-badge-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 0 12px rgba(199, 92, 64, 0.38);
+  }
+  50% {
+    transform: scale(1.07);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.12),
+      0 0 18px rgba(199, 92, 64, 0.55);
+  }
+}
+
 .vtt-hud-column > * {
   animation: vtt-hud-card-enter 360ms var(--vtt-ease-premium) both;
 }
@@ -2278,6 +2329,18 @@ html[data-theme='light'] .vtt-hud-toggle-btn:hover {
     0 11px 20px rgba(52, 36, 20, 0.16);
 }
 
+html[data-theme='light'] .vtt-collapsible-badge {
+  border-color: rgba(138, 92, 28, 0.28);
+  background: rgba(138, 92, 28, 0.1);
+  color: #6b4a18;
+}
+
+html[data-theme='light'] .vtt-hud-toggle-badge {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.3),
+    0 0 10px rgba(160, 50, 40, 0.22);
+}
+
 html[data-theme='light'] .vtt-chat-chip {
   border-color: rgba(138, 92, 28, 0.28);
   background: rgba(138, 92, 28, 0.12);
@@ -2402,6 +2465,8 @@ html[data-theme='light'] .vtt-chat-mention-highlight {
   .vtt-collapsible-chevron,
   .vtt-collapsible-shell,
   .vtt-hud-column > *,
+  .vtt-hud-column--floating,
+  .vtt-hud-toggle-badge,
   .vtt-collapse.is-open > div {
     animation: none !important;
     transition: none !important;

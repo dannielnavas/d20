@@ -80,7 +80,7 @@ export function DmCollapsibleCard({
         <span className="flex min-w-0 flex-1 items-center gap-2">
           <span className="truncate">{title}</span>
           {badge != null && badge !== false && badge !== '' ? (
-            <span className="shrink-0 font-mono text-[0.65rem] font-normal normal-case tracking-normal text-[var(--vtt-text-muted)]">
+            <span className="vtt-collapsible-badge shrink-0 font-mono text-[0.65rem] font-normal normal-case tracking-normal text-[var(--vtt-text-muted)]">
               {badge}
             </span>
           ) : null}
