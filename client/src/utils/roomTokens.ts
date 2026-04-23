@@ -8,6 +8,11 @@ export function allPlayerCharacters(state: RoomState): Token[] {
       if (t.type === 'pc' && !byId.has(t.id)) byId.set(t.id, t)
     }
   }
+  // Fallback para estados denormalizados o salas antiguas:
+  // si un PJ no aparece en escenas, lo tomamos de `state.tokens`.
+  for (const t of state.tokens) {
+    if (t.type === 'pc' && !byId.has(t.id)) byId.set(t.id, t)
+  }
   return Array.from(byId.values())
 }
 

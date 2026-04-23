@@ -24,6 +24,7 @@ export type PlayerHudColumnProps = {
   playerSessionId: string
   canRequestRoll: boolean
   currentToken: Token | null
+  onVisibilityChange?: (visible: boolean) => void
 }
 
 export function PlayerHudColumn({
@@ -39,9 +40,18 @@ export function PlayerHudColumn({
   playerSessionId,
   canRequestRoll,
   currentToken,
+  onVisibilityChange,
 }: PlayerHudColumnProps) {
   const [chatUnread, setChatUnread] = useState(0)
+  const [lastSeenChatTs, setLastSeenChatTs] = useState(() => Date.now())
   const [chatDmSectionOpen, setChatDmSectionOpen] = useState(true)
+  const [dockOpen, setDockOpen] = useState(() => {
+    try {
+      return localStorage.getItem(`d20:player-hud-open:${roomId}`) !== '0'
+    } catch {
+      return true
+    }
+  })
   const [avatarDraft, setAvatarDraft] = useState('')
   const [frameColorDraft, setFrameColorDraft] = useState<string>(DEFAULT_TOKEN_FRAME_COLOR)
   const [hpCurrentDraft, setHpCurrentDraft] = useState(0)
@@ -69,12 +79,55 @@ export function PlayerHudColumn({
   }
 
   const chatBadge = chatUnread > 0 ? (chatUnread > 99 ? '99+' : chatUnread) : undefined
+  const hiddenChatUnread = dockOpen
+    ? 0
+    : roomState.chatLog.reduce((count, item) => count + (item.ts > lastSeenChatTs ? 1 : 0), 0)
+  const menuBadgeCount = hiddenChatUnread
+
+  useEffect(() => {
+    onVisibilityChange?.(dockOpen)
+    try {
+      localStorage.setItem(`d20:player-hud-open:${roomId}`, dockOpen ? '1' : '0')
+    } catch {
+      /* noop */
+    }
+  }, [dockOpen, onVisibilityChange, roomId])
+
+  useEffect(() => {
+    if (!dockOpen) return
+    const newest = roomState.chatLog[0]?.ts
+    if (typeof newest === 'number' && Number.isFinite(newest)) {
+      setLastSeenChatTs((prev) => Math.max(prev, newest))
+    } else {
+      setLastSeenChatTs(Date.now())
+    }
+  }, [dockOpen, roomState.chatLog])
 
   return (
-    <div
-      className="vtt-hud-column fixed right-3 top-[5.5rem] z-[89] flex w-[min(22rem,calc(100vw-1.5rem))] max-h-[calc(100svh-5.25rem)] flex-col gap-2 overflow-y-auto pb-2 [scrollbar-gutter:stable] sm:top-24"
-      aria-label="Herramientas del jugador"
-    >
+    <>
+      <div className="pointer-events-auto fixed right-2 top-[5.5rem] z-[90] sm:right-3 sm:top-24">
+        <button
+          type="button"
+          className="relative inline-flex items-center gap-1.5 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 px-2.5 py-1.5 font-vtt-display text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--vtt-gold)] shadow-md backdrop-blur-sm hover:border-[var(--vtt-gold-dim)]"
+          onClick={() => setDockOpen((prev) => !prev)}
+          aria-expanded={dockOpen}
+          aria-label={dockOpen ? 'Ocultar herramientas del jugador' : 'Mostrar herramientas del jugador'}
+        >
+          <span aria-hidden>☰</span>
+          Herramientas
+          {menuBadgeCount > 0 ? (
+            <span className="inline-flex min-h-[1rem] min-w-[1rem] items-center justify-center rounded-full bg-[var(--vtt-ember)] px-1 text-[0.58rem] font-bold leading-none text-white">
+              {menuBadgeCount > 99 ? '99+' : menuBadgeCount}
+            </span>
+          ) : null}
+        </button>
+      </div>
+
+      {!dockOpen ? null : (
+        <div
+          className="vtt-hud-column fixed right-2 top-[8.15rem] z-[89] flex w-[min(17.5rem,calc(100vw-1rem))] max-h-[calc(100svh-8.2rem)] flex-col gap-1.5 overflow-y-auto pb-2 [scrollbar-gutter:stable] sm:right-3 sm:top-[8.6rem] sm:max-h-[calc(100svh-8.65rem)]"
+          aria-label="Herramientas del jugador"
+        >
       {currentToken ? (
         <DmCollapsibleCard roomId={roomId} sectionId="player-character" title="Tu personaje">
           <div className="space-y-3 px-2 py-2">
@@ -252,6 +305,8 @@ export function PlayerHudColumn({
           ) : null}
         </div>
       </DmCollapsibleCard>
-    </div>
+        </div>
+      )}
+    </>
   )
 }

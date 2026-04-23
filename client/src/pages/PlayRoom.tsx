@@ -227,6 +227,7 @@ export function PlayRoom() {
     session &&
     (session.role === 'dm' || session.role === 'spectator' || session.claimedTokenId !== null),
   )
+  const mapInteractionShellClass = 'w-full min-w-0'
 
   const pcs = state ? allPlayerCharacters(state) : []
   const currentPlayerToken =
@@ -474,13 +475,13 @@ export function PlayRoom() {
           </div>
         ) : null}
 
-        {socket && session && state && (showLobby || showMap) ? (
-          <div className={showMap ? 'contents' : 'w-full max-w-6xl shrink-0 px-0'}>
+        {socket && session && state && showLobby ? (
+          <div className="w-full max-w-6xl shrink-0 px-0">
             <MediaDock
               socket={socket}
               session={session}
               roomState={state}
-              layout={showMap ? 'map' : 'lobby'}
+              layout="lobby"
               playerSessionId={!wantsDm && !wantsSpectator ? playerSessionId : null}
               isDm={session.role === 'dm'}
             />
@@ -491,18 +492,30 @@ export function PlayRoom() {
           <CharacterLobby roomId={roomId} pcs={pcs} claimingId={claimingId} onClaim={onClaim} />
         )}
 
-        {showMap && state && socket && (
-          <MapBoard
-            socket={socket}
-            roomState={state}
-            setRoomState={setState}
-            canDragToken={canDragToken}
-            isDm={isDm}
-            isSpectator={session?.role === 'spectator'}
-            suppressDmMapVideoChrome={isDm}
-            showReactionPalette={false}
-          />
-        )}
+        {showMap && state && socket ? (
+          <div className={`${mapInteractionShellClass} relative`}>
+            <MapBoard
+              socket={socket}
+              roomState={state}
+              setRoomState={setState}
+              canDragToken={canDragToken}
+              isDm={isDm}
+              isSpectator={session?.role === 'spectator'}
+              suppressDmMapVideoChrome={isDm}
+              showReactionPalette={false}
+            />
+            {session ? (
+              <MediaDock
+                socket={socket}
+                session={session}
+                roomState={state}
+                layout="map"
+                playerSessionId={!wantsDm && !wantsSpectator ? playerSessionId : null}
+                isDm={session.role === 'dm'}
+              />
+            ) : null}
+          </div>
+        ) : null}
 
         {showMap && state && socket && session ? (
           <GroupPollPanel

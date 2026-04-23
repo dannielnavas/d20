@@ -238,74 +238,44 @@ function VideoThumb({
   const accent = frameColor ?? (isNarrator ? '#d4b061' : '#b48a3c')
   const shellClass = compact
     ? featured
-      ? 'relative h-[7.5rem] w-[12rem] shrink-0 overflow-hidden rounded-[1.1rem] border bg-black'
-      : 'relative h-[6.25rem] w-[10rem] shrink-0 overflow-hidden rounded-[1rem] border bg-black'
-    : 'relative aspect-video w-[min(100%,11rem)] shrink-0 overflow-hidden rounded-[1rem] border bg-black'
+      ? 'relative h-[7.9rem] w-[12.3rem] shrink-0 overflow-visible bg-black'
+      : 'relative h-[6.6rem] w-[10.4rem] shrink-0 overflow-visible bg-black'
+    : 'relative aspect-video w-[min(100%,11.4rem)] shrink-0 overflow-visible bg-black'
+  const nameInitials = name
+    .split(/\s+/)
+    .map((part) => part[0] ?? '')
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
 
   return (
     <div
-      className={`${shellClass} vtt-media-thumb ${isSpeaking ? 'vtt-media-thumb--speaking' : ''} ${isLeadSpeaker ? 'vtt-media-thumb--lead' : ''}`}
-      style={{
-        borderColor: accent,
-        boxShadow: `0 0 0 1px ${accent}44, 0 12px 36px rgba(0,0,0,0.55)`,
-      }}
+      className={`${shellClass} vtt-media-thumb vtt-media-thumb--ornate ${isSpeaking ? 'vtt-media-thumb--speaking' : ''} ${isLeadSpeaker ? 'vtt-media-thumb--lead' : ''}`}
+      style={{ '--vtt-thumb-accent': accent } as React.CSSProperties}
     >
-      <div
-        className="pointer-events-none absolute inset-x-3 top-0 z-[2] h-3 rounded-b-full opacity-90"
-        style={{ background: `linear-gradient(180deg, ${accent}, transparent)` }}
-      />
-      <div
-        className="pointer-events-none absolute inset-y-3 left-0 z-[2] w-2 rounded-r-full opacity-75"
-        style={{ background: `linear-gradient(180deg, transparent, ${accent}, transparent)` }}
-      />
-      <div
-        className="pointer-events-none absolute inset-y-3 right-0 z-[2] w-2 rounded-l-full opacity-75"
-        style={{ background: `linear-gradient(180deg, transparent, ${accent}, transparent)` }}
-      />
-      <div className="flex h-full w-full items-stretch">
-        <div
-          className="flex w-9 shrink-0 items-center justify-center border-r bg-[var(--vtt-bg-elevated)]"
-          style={{ borderColor: `${accent}55` }}
-        >
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span
-              className="font-vtt-display text-[0.58rem] uppercase tracking-[0.12em]"
-              style={{ color: accent }}
-            >
-              {name.slice(0, 2)}
-            </span>
-          )}
-        </div>
-        <div className="relative min-w-0 flex-1 overflow-hidden">
-          <video
-            ref={ref}
-            className={`h-full w-full object-cover transition-opacity duration-300 ${showPortrait ? 'opacity-0' : 'opacity-100'}`}
-            playsInline
-            muted={muted}
-            autoPlay
-            aria-label={name}
-          />
-          {showPortrait ? (
-            <div className="vtt-media-thumb__portrait absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.07),transparent_28%),linear-gradient(180deg,rgba(20,16,12,0.9),rgba(8,7,6,0.98))]">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt=""
-                  className="vtt-media-thumb__portrait-img h-full w-full object-cover"
-                />
-              ) : (
-                <span
-                  className="font-vtt-display text-xl uppercase tracking-[0.16em]"
-                  style={{ color: accent }}
-                >
-                  {name.slice(0, 2)}
-                </span>
-              )}
-            </div>
-          ) : null}
-        </div>
+      <div className="vtt-media-thumb__camera-window relative h-full w-full overflow-hidden rounded-[0.72rem]">
+        <video
+          ref={ref}
+          className={`h-full w-full object-cover transition-opacity duration-300 ${showPortrait ? 'opacity-0' : 'opacity-100'}`}
+          playsInline
+          muted={muted}
+          autoPlay
+          aria-label={name}
+        />
+        {showPortrait ? (
+          <div className="vtt-media-thumb__portrait absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.07),transparent_28%),linear-gradient(180deg,rgba(20,16,12,0.9),rgba(8,7,6,0.98))]">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="vtt-media-thumb__portrait-img h-full w-full object-cover" />
+            ) : (
+              <span
+                className="font-vtt-display text-xl uppercase tracking-[0.16em]"
+                style={{ color: accent }}
+              >
+                {nameInitials}
+              </span>
+            )}
+          </div>
+        ) : null}
       </div>
       {isSpeaking ? <span className="vtt-media-thumb__voice-waves" aria-hidden /> : null}
       {handRaised ? (
@@ -325,12 +295,20 @@ function VideoThumb({
           Narrador
         </div>
       ) : null}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent px-1 pb-1 pt-4">
-        <p
-          className="truncate text-center font-vtt-display text-[0.55rem] font-semibold uppercase tracking-[0.22em]"
-          style={{ color: accent }}
-        >
-          {name}
+      <div className="vtt-media-thumb__nameplate pointer-events-none absolute bottom-0 left-1/2 z-[4] flex min-w-[72%] max-w-[92%] -translate-x-1/2 translate-y-[46%] items-center gap-1.5 px-2.5 py-1">
+        {!isNarrator ? (
+          <span className="vtt-media-thumb__nameplate-avatar flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/40 bg-[rgba(10,8,6,0.8)]">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <span className="font-vtt-display text-[0.5rem] font-semibold tracking-[0.08em] text-[var(--vtt-text)]">
+                {nameInitials}
+              </span>
+            )}
+          </span>
+        ) : null}
+        <p className="truncate text-center font-vtt-display text-[0.52rem] font-semibold uppercase tracking-[0.19em] text-[#ece5d6]">
+          {isNarrator ? 'Narrador' : name}
         </p>
       </div>
     </div>
@@ -854,7 +832,7 @@ export function MediaDock({
 
   if (layout === 'map') {
     return (
-      <div className="pointer-events-none fixed inset-0 z-[86]" aria-label="Mesa de voz y cámara">
+      <div className="pointer-events-none absolute inset-0 z-[86]" aria-label="Mesa de voz y cámara">
         {mediaErr ? (
           <p
             role="alert"
@@ -875,7 +853,7 @@ export function MediaDock({
               return (
                 <>
                   {narratorParticipants.length > 0 ? (
-                    <div className="pointer-events-auto absolute left-1/2 top-3 z-[86] flex -translate-x-1/2 flex-row gap-3">
+                    <div className="pointer-events-none absolute left-1/2 top-3 z-[86] flex -translate-x-1/2 flex-row gap-3">
                       {narratorParticipants.map((participant) => (
                         <VideoThumb
                           key={participant.id}
@@ -898,7 +876,7 @@ export function MediaDock({
                   ) : null}
                   {playerParticipants.length > 0 ? (
                     <div
-                      className="pointer-events-auto absolute bottom-24 left-3 top-20 z-[86] flex w-[min(100%,11rem)] flex-col gap-3 overflow-y-auto xl:w-[12rem] hide-scrollbar"
+                      className="pointer-events-none absolute bottom-24 left-3 top-20 z-[86] flex w-[min(100%,11rem)] flex-col gap-3 overflow-y-auto xl:w-[12rem] hide-scrollbar"
                       style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     >
                       {playerParticipants.map((participant) => (

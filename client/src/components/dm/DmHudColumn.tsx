@@ -1,4 +1,4 @@
-import { useCallback, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import type { Socket } from 'socket.io-client'
 import { type DmHudToolId, useDmHudPreferences } from '../../hooks/useDmHudPreferences'
 import type { PrivateNotesPair } from '../../types/private-notes'
@@ -32,6 +32,7 @@ export type DmHudColumnProps = {
   onInitiativeNext: () => void
   onInitiativeRollAll: () => void
   onInitiativeSetModifier: (tokenId: string, modifier: number) => void
+  onVisibilityChange?: (visible: boolean) => void
 }
 
 export function DmHudColumn({
@@ -51,14 +52,23 @@ export function DmHudColumn({
   onInitiativeNext,
   onInitiativeRollAll,
   onInitiativeSetModifier,
+  onVisibilityChange,
 }: DmHudColumnProps) {
   const prefs = useDmHudPreferences(roomId)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [pollModalOpen, setPollModalOpen] = useState(false)
   const [chatUnread, setChatUnread] = useState(0)
+  const [lastSeenChatTs, setLastSeenChatTs] = useState(() => Date.now())
   const [chatDmSectionOpen, setChatDmSectionOpen] = useState(true)
   const [clearConfirm, setClearConfirm] = useState(false)
   const [clearDone, setClearDone] = useState(false)
+  const [dockOpen, setDockOpen] = useState(() => {
+    try {
+      return localStorage.getItem(`d20:dm-hud-open:${roomId}`) !== '0'
+    } catch {
+      return true
+    }
+  })
   const dialogTitleId = useId()
 
   const onChatSectionExpanded = useCallback((open: boolean) => {
@@ -170,11 +180,60 @@ export function DmHudColumn({
   )
 
   const pendingRollCount = roomState.pendingRollRequests?.length ?? 0
+  const hiddenChatUnread = useMemo(() => {
+    if (dockOpen) return 0
+    return roomState.chatLog.reduce((count, item) => count + (item.ts > lastSeenChatTs ? 1 : 0), 0)
+  }, [dockOpen, lastSeenChatTs, roomState.chatLog])
+  const menuBadgeCount = pendingRollCount + hiddenChatUnread
+
+  useEffect(() => {
+    onVisibilityChange?.(dockOpen)
+    try {
+      localStorage.setItem(`d20:dm-hud-open:${roomId}`, dockOpen ? '1' : '0')
+    } catch {
+      /* noop */
+    }
+  }, [dockOpen, onVisibilityChange, roomId])
+
+  useEffect(() => {
+    if (!dockOpen) return
+    const newest = roomState.chatLog[0]?.ts
+    if (typeof newest === 'number' && Number.isFinite(newest)) {
+      setLastSeenChatTs((prev) => Math.max(prev, newest))
+    } else {
+      setLastSeenChatTs(Date.now())
+    }
+  }, [dockOpen, roomState.chatLog])
+
+  useEffect(() => {
+    if (timerActive && !dockOpen) {
+      setDockOpen(true)
+    }
+  }, [dockOpen, timerActive])
 
   return (
     <>
+      <div className="pointer-events-auto fixed right-2 top-[5.5rem] z-[90] sm:right-3 sm:top-24">
+        <button
+          type="button"
+          className="relative inline-flex items-center gap-1.5 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 px-2.5 py-1.5 font-vtt-display text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-[var(--vtt-gold)] shadow-md backdrop-blur-sm hover:border-[var(--vtt-gold-dim)]"
+          onClick={() => setDockOpen((prev) => !prev)}
+          aria-expanded={dockOpen}
+          aria-label={dockOpen ? 'Ocultar herramientas del Narrador' : 'Mostrar herramientas del Narrador'}
+        >
+          <span aria-hidden>☰</span>
+          Herramientas
+          {menuBadgeCount > 0 ? (
+            <span className="inline-flex min-h-[1rem] min-w-[1rem] items-center justify-center rounded-full bg-[var(--vtt-ember)] px-1 text-[0.58rem] font-bold leading-none text-white">
+              {menuBadgeCount > 99 ? '99+' : menuBadgeCount}
+            </span>
+          ) : null}
+        </button>
+      </div>
+
+      {!dockOpen ? null : (
       <div
-        className="vtt-hud-column fixed right-3 top-[5.5rem] z-[89] flex w-[min(22rem,calc(100vw-1.5rem))] max-h-[calc(100svh-5.25rem)] flex-col gap-2 overflow-y-auto pb-2 [scrollbar-gutter:stable] sm:top-24"
+        className="vtt-hud-column fixed right-2 top-[8.15rem] z-[89] flex w-[min(17.5rem,calc(100vw-1rem))] max-h-[calc(100svh-8.2rem)] flex-col gap-1.5 overflow-y-auto pb-2 [scrollbar-gutter:stable] sm:right-3 sm:top-[8.6rem] sm:max-h-[calc(100svh-8.65rem)]"
         aria-label="Herramientas del Narrador"
       >
         <div className="sticky top-0 z-[1] flex shrink-0 items-center justify-between gap-2 bg-[var(--vtt-bg)]/80 pb-1 backdrop-blur-sm">
@@ -293,6 +352,7 @@ export function DmHudColumn({
           </div>
         ))}
       </div>
+      )}
 
       {settingsOpen ? (
         <div
