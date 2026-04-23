@@ -27,14 +27,6 @@ import type { Token } from '../types/room'
 import { playNat1Sound, playNat20Sound } from '../utils/audioFx'
 import { allPlayerCharacters, findTokenInRoomState } from '../utils/roomTokens'
 
-const EPIC_LOADING_LINES = [
-  'Preparando la mazmorra…',
-  'Invocando goblins…',
-  'Tirando iniciativa…',
-  'Bendiciendo los dados…',
-  'Desplegando el tablero…',
-] as const
-
 function modeLabelFallback(mode: 'normal' | 'advantage' | 'disadvantage') {
   if (mode === 'advantage') return 'Ventaja'
   if (mode === 'disadvantage') return 'Desventaja'
@@ -108,7 +100,6 @@ export function PlayRoom() {
   const [notificationPermission, setNotificationPermission] = useState<
     NotificationPermission | 'unsupported'
   >(() => (typeof Notification !== 'undefined' ? Notification.permission : 'unsupported'))
-  const [loadingLineIndex, setLoadingLineIndex] = useState(0)
 
   useInitiativeTurnNotify(state, session)
 
@@ -138,14 +129,6 @@ export function PlayRoom() {
       setPasswordInput(appliedSessionPassword)
     }
   }, [appliedSessionPassword, passwordGate])
-
-  useEffect(() => {
-    if (passwordGate || (joinPayload && state && session)) return
-    const timer = window.setInterval(() => {
-      setLoadingLineIndex((current) => (current + 1) % EPIC_LOADING_LINES.length)
-    }, 2100)
-    return () => window.clearInterval(timer)
-  }, [joinPayload, passwordGate, session, state])
 
   const submitSessionPassword = useCallback(() => {
     if (!roomId) return
@@ -283,14 +266,6 @@ export function PlayRoom() {
   }, [rollFx, rollFxReveal])
 
   const showEpicLoading = !error && !passwordGate && (!joinPayload || !state || !session)
-  const loadingLead = !joinPayload
-    ? 'Afinando tu acceso a la mesa'
-    : !state
-      ? 'Abriendo los sellos de la sala'
-      : !session
-        ? 'Tomando asiento en la mesa'
-        : 'Preparando la escena'
-  const loadingLine = EPIC_LOADING_LINES[loadingLineIndex] ?? EPIC_LOADING_LINES[0]
 
   return (
     <div className="font-vtt-body flex min-h-svh flex-col gap-4 px-4 py-4 text-left md:px-6">
