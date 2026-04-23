@@ -65,8 +65,8 @@ export function DicePanel({
     layout === 'dock'
       ? nestedInHud
         ? 'relative z-auto w-full flex flex-col'
-        : 'relative z-auto w-full flex flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg)]/95 shadow-lg backdrop-blur-sm'
-      : `fixed ${floatingSide === 'left' ? 'left-3' : 'right-3'} top-24 z-30 w-[min(24rem,calc(100vw-1.5rem))] flex flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg)]/95 shadow-lg backdrop-blur-sm`
+        : 'vtt-panel relative z-auto w-full flex flex-col'
+      : `vtt-panel fixed ${floatingSide === 'left' ? 'left-2 md:left-3' : 'right-2 md:right-3'} top-[5.25rem] md:top-24 z-30 w-[min(24rem,calc(100vw-1rem))] flex max-h-[min(76vh,36rem)] flex-col`
 
   const showInnerHeader = !(layout === 'dock' && nestedInHud)
   const innerExpanded = nestedInHud ? true : expanded
@@ -76,7 +76,7 @@ export function DicePanel({
       {showInnerHeader ? (
         <button
           type="button"
-          className="vtt-surface vtt-glow-border flex w-full items-center justify-between rounded-t-[var(--vtt-radius)] border-0 border-b border-[var(--vtt-border-subtle)] bg-transparent px-3 py-2 text-left font-vtt-display text-sm font-semibold tracking-wide text-[var(--vtt-gold)] hover:bg-[var(--vtt-surface-warm)]"
+          className="vtt-panel-header w-full border-0 bg-transparent text-left"
           onClick={() => setExpanded((e) => !e)}
           aria-expanded={expanded}
           aria-controls={expanded ? 'dice-panel-contenido' : undefined}
@@ -91,11 +91,7 @@ export function DicePanel({
       {innerExpanded ? (
         <div
           id="dice-panel-contenido"
-          className={
-            nestedInHud && layout === 'dock'
-              ? 'vtt-surface vtt-glow-border border-0 p-3 pt-2'
-              : 'vtt-surface vtt-glow-border border-0 p-3 pt-2'
-          }
+          className="vtt-surface hide-scrollbar overflow-y-auto border-0 p-3 pt-2"
           role="region"
           aria-labelledby={showInnerHeader ? 'dice-panel-cabecera' : undefined}
         >

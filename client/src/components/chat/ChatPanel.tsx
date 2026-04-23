@@ -258,8 +258,8 @@ export function ChatPanel({
     layout === 'dock' && nestedInHud
       ? 'relative z-auto flex w-full flex-col'
       : layout === 'dock'
-        ? 'relative z-auto flex w-full flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 shadow-lg backdrop-blur-sm'
-        : 'fixed bottom-3 right-3 z-[85] flex w-[min(22rem,calc(100vw-1.5rem))] flex-col rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 shadow-lg backdrop-blur-sm'
+        ? 'vtt-panel relative z-auto flex w-full flex-col'
+        : 'vtt-panel fixed bottom-28 right-2 z-[85] flex w-[min(22rem,calc(100vw-1rem))] flex-col md:bottom-3 md:right-3'
 
   const showInnerHeader = !(layout === 'dock' && nestedInHud)
   const showMessages = nestedDock ? true : expanded
@@ -269,7 +269,7 @@ export function ChatPanel({
       {showInnerHeader ? (
         <button
           type="button"
-          className="flex w-full items-center justify-between gap-2 border-b border-[var(--vtt-border-subtle)] px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-[var(--vtt-gold)]"
+          className="vtt-panel-header vtt-eyebrow w-full text-left"
           onClick={() => onExpandedChange(!expanded)}
           aria-expanded={expanded}
           aria-label={

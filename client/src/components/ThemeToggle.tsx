@@ -8,7 +8,7 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
     <button
       type="button"
       onClick={toggle}
-      className={`dm-theme-toggle group inline-flex items-center gap-2 rounded-full border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] px-3 py-1.5 text-xs font-semibold text-[var(--vtt-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition hover:border-[var(--vtt-gold-dim)] ${className}`}
+      className={`dm-theme-toggle group inline-flex min-h-11 items-center gap-2 rounded-full border border-[var(--vtt-border-subtle)] bg-[var(--vtt-bg-elevated)] px-3 py-1.5 text-xs font-semibold text-[var(--vtt-text)] transition hover:border-[var(--vtt-border)] ${className}`}
       aria-pressed={isDark}
       aria-label={isDark ? 'Activar modo claro' : 'Activar modo oscuro'}
     >
@@ -17,7 +17,7 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
         aria-hidden
       >
         <span
-          className={`absolute left-0.5 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-gradient-to-br from-[var(--vtt-gold-hover)] to-[var(--vtt-gold)] shadow-sm transition-transform duration-200 ease-out ${
+          className={`absolute left-0.5 top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-[var(--vtt-gold)] shadow-sm transition-transform duration-200 ease-out ${
             isDark ? 'translate-x-[1.125rem]' : 'translate-x-0'
           }`}
         />

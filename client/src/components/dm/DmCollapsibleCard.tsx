@@ -65,7 +65,7 @@ export function DmCollapsibleCard({
 
   return (
     <section
-      className={`vtt-collapsible-shell vtt-surface vtt-glow-border flex w-full flex-col overflow-hidden rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)]/95 shadow-lg backdrop-blur-sm ${className}`}
+      className={`vtt-collapsible-shell vtt-panel flex w-full flex-col overflow-hidden ${className}`}
       aria-label={title}
       data-expanded={expanded ? 'true' : 'false'}
     >

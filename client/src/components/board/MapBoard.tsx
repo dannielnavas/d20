@@ -75,7 +75,7 @@ function DirectMapLoopVideo({
   return (
     <video
       ref={ref}
-      className="pointer-events-none absolute inset-0 h-full w-full object-contain"
+      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
       src={src}
       loop
       muted={!audioEnabled}
@@ -323,6 +323,7 @@ export function MapBoard({
   )
 
   const onBoardPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') return
     const rect = e.currentTarget.getBoundingClientRect()
     if (!rect.width || !rect.height) return
     const relX = (e.clientX - rect.left) / rect.width - 0.5
@@ -388,7 +389,7 @@ export function MapBoard({
               : 'Rueda o pellizco para zoom en el mapa. Arrastra tu ficha con el dedo o el ratón; Mayús+clic en el mapa para ping. Reacciones en el panel de herramientas a la izquierda. El fondo se mueve desde las zonas vacías.'}
           </p>
           <div
-            className="vtt-map-premium-frame relative min-h-[min(70svh,720px)] w-full flex-1 overflow-hidden rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[#040302] shadow-[inset_0_0_80px_rgba(0,0,0,0.55)]"
+            className="vtt-map-premium-frame relative min-h-[min(58svh,620px)] w-full flex-1 overflow-hidden rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[#040302] shadow-[inset_0_0_80px_rgba(0,0,0,0.55)] sm:min-h-[min(64svh,680px)] xl:min-h-[min(70svh,720px)]"
             style={{
               backgroundColor: 'var(--dm-map-chrome, #040302)',
               ['--vtt-board-parallax-x' as string]: `${parallaxOffset.x}px`,
@@ -441,7 +442,7 @@ export function MapBoard({
                         key={backgroundUrl}
                         id={ytIframeId}
                         title="Vídeo de mapa (YouTube)"
-                        className="vtt-map-parallax-layer pointer-events-none absolute inset-0 h-full w-full border-0 object-contain"
+                        className="vtt-map-parallax-layer pointer-events-none absolute inset-0 h-full w-full border-0 object-cover"
                         src={ytEmbedSrc}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen={false}
@@ -466,7 +467,7 @@ export function MapBoard({
                         alt=""
                         role="presentation"
                         draggable={false}
-                        className="vtt-map-parallax-layer pointer-events-none absolute inset-0 h-full w-full object-contain"
+                        className="vtt-map-parallax-layer pointer-events-none absolute inset-0 h-full w-full object-cover"
                         src={backgroundUrl}
                         onLoad={onImgLoad}
                         onError={onImgError}

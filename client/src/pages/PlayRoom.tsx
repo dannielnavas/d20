@@ -274,75 +274,76 @@ export function PlayRoom() {
         Saltar al contenido de la sala
       </a>
 
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[var(--vtt-border-subtle)] pb-4">
-        <div>
-          <p className="font-vtt-display text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-[var(--vtt-gold-dim)]">
-            Sala activa
-          </p>
-          <p className="font-vtt-display mt-1 text-xl font-semibold tracking-wide text-[var(--vtt-text)]">
-            <span className="font-mono text-[0.95em] font-normal text-[var(--vtt-gold)]">
-              {roomId || 'Sin identificador'}
-            </span>
-          </p>
-          {session ? (
-            <>
-              <p className="mt-2 text-sm text-[var(--vtt-text-muted)]">{sessionLabel}</p>
-              {session.role === 'player' &&
-              session.claimedTokenId &&
-              notificationPermission === 'default' ? (
-                <button
-                  type="button"
-                  className="mt-2 text-left text-xs font-semibold text-[var(--vtt-gold)] underline decoration-[var(--vtt-gold-dim)] underline-offset-2 hover:text-[var(--vtt-text)]"
-                  onClick={() => {
-                    void Notification.requestPermission().then((p) => setNotificationPermission(p))
-                  }}
-                >
-                  Activar avisos del navegador cuando sea tu turno
-                </button>
-              ) : null}
-              {session.role === 'player' &&
-              session.claimedTokenId &&
-              notificationPermission === 'denied' ? (
-                <p className="mt-2 max-w-md text-xs text-[var(--vtt-text-muted)]">
-                  Notificaciones bloqueadas en el navegador. Si quieres avisos de turno, permite
-                  notificaciones para este sitio en la configuración del navegador.
-                </p>
-              ) : null}
-            </>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-4">
-          {isDm ? (
-            <button
-              type="button"
-              className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--vtt-text)] hover:border-[var(--vtt-gold)] disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={onResetDiceLog}
-              disabled={!state || state.diceLog.length === 0}
-            >
-              Borrar historial de tiradas
-            </button>
-          ) : null}
-          <ThemeToggle />
-          <div
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-            className="text-sm text-[var(--vtt-text-muted)]"
-          >
-            <span className="sr-only">Estado de conexión: </span>
-            <span
-              className={
-                connected
-                  ? 'font-medium text-[var(--vtt-forest)]'
-                  : 'font-medium text-[var(--vtt-ember)]'
-              }
-            >
-              {connected ? '● Conectado' : '○ Conectando…'}
-            </span>
+      <header className="vtt-panel shrink-0 px-4 py-4 md:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="vtt-eyebrow">Sala activa</p>
+            <p className="font-vtt-display mt-1 text-xl font-semibold tracking-wide text-[var(--vtt-text)]">
+              <span className="font-mono text-[0.95em] font-normal text-[var(--vtt-gold)]">
+                {roomId || 'Sin identificador'}
+              </span>
+            </p>
+            {session ? (
+              <>
+                <p className="mt-2 text-sm text-[var(--vtt-text-muted)]">{sessionLabel}</p>
+                {session.role === 'player' &&
+                session.claimedTokenId &&
+                notificationPermission === 'default' ? (
+                  <button
+                    type="button"
+                    className="mt-2 text-left text-xs font-semibold text-[var(--vtt-gold)] underline decoration-[var(--vtt-gold-dim)] underline-offset-2 hover:text-[var(--vtt-text)]"
+                    onClick={() => {
+                      void Notification.requestPermission().then((p) =>
+                        setNotificationPermission(p),
+                      )
+                    }}
+                  >
+                    Activar avisos del navegador cuando sea tu turno
+                  </button>
+                ) : null}
+                {session.role === 'player' &&
+                session.claimedTokenId &&
+                notificationPermission === 'denied' ? (
+                  <p className="mt-2 max-w-md text-xs text-[var(--vtt-text-muted)]">
+                    Notificaciones bloqueadas en el navegador. Si quieres avisos de turno, permite
+                    notificaciones para este sitio en la configuración del navegador.
+                  </p>
+                ) : null}
+              </>
+            ) : null}
           </div>
-          <Link to="/" className="vtt-link text-sm font-semibold">
-            Inicio
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            {isDm ? (
+              <button
+                type="button"
+                className="vtt-btn-ghost disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={onResetDiceLog}
+                disabled={!state || state.diceLog.length === 0}
+              >
+                Borrar historial de tiradas
+              </button>
+            ) : null}
+            <ThemeToggle />
+            <div
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="vtt-pill text-sm"
+            >
+              <span className="sr-only">Estado de conexión: </span>
+              <span
+                className={
+                  connected
+                    ? 'vtt-status-dot mr-1.5 bg-[var(--vtt-forest)]'
+                    : 'vtt-status-dot mr-1.5 bg-[var(--vtt-ember)]'
+                }
+              />
+              <span>{connected ? 'Conectado' : 'Conectando…'}</span>
+            </div>
+            <Link to="/" className="vtt-link text-sm font-semibold">
+              Inicio
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -366,7 +367,7 @@ export function PlayRoom() {
       <main
         id="contenido-sala"
         tabIndex={-1}
-        className={`relative flex min-h-0 flex-1 flex-col items-center gap-6 outline-none ${
+        className={`relative flex min-h-0 w-full flex-1 flex-col items-center gap-6 outline-none ${
           showMap || (showLobby && session?.role === 'player') ? 'pb-28' : ''
         }`}
       >
@@ -425,7 +426,7 @@ export function PlayRoom() {
             aria-modal="true"
             aria-labelledby="gate-sesion-titulo"
           >
-            <div className="vtt-surface vtt-glow-border w-full max-w-md p-6 shadow-lg">
+            <div className="vtt-panel w-full max-w-md p-6">
               <h2
                 id="gate-sesion-titulo"
                 className="font-vtt-display text-lg font-semibold tracking-wide text-[var(--vtt-gold)]"
@@ -589,7 +590,7 @@ export function PlayRoom() {
           <div
             role="status"
             aria-live="polite"
-            className={`fixed bottom-40 z-[94] flex max-w-[min(20rem,calc(100vw-2rem))] items-start gap-3 rounded-[var(--vtt-radius)] border border-[var(--vtt-border)] bg-[var(--vtt-bg-elevated)] px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)] ${
+            className={`vtt-toast fixed bottom-40 z-[94] flex max-w-[min(20rem,calc(100vw-2rem))] items-start gap-3 px-4 py-3 ${
               isDm ? 'left-4' : 'right-4'
             }`}
           >
@@ -634,7 +635,7 @@ export function PlayRoom() {
             </div>
             <button
               type="button"
-              className="shrink-0 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] px-2 py-1 text-xs font-semibold text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold)] hover:text-[var(--vtt-text)]"
+              className="vtt-btn-ghost h-8 shrink-0 px-2 py-1 text-xs"
               onClick={clearRollRequestFeedback}
             >
               Cerrar
@@ -646,7 +647,7 @@ export function PlayRoom() {
           <div
             role="status"
             aria-live="polite"
-            className={`fixed bottom-24 z-[95] flex max-w-[min(20rem,calc(100vw-2rem))] items-start gap-3 rounded-[var(--vtt-radius)] border border-[var(--vtt-gold)] bg-[var(--vtt-bg-elevated)] px-4 py-3 shadow-[0_8px_32px_rgba(0,0,0,0.45)] ${
+            className={`vtt-toast fixed bottom-24 z-[95] flex max-w-[min(20rem,calc(100vw-2rem))] items-start gap-3 border-[var(--vtt-gold)] px-4 py-3 ${
               isDm ? 'left-4' : 'right-4'
             }`}
           >
@@ -664,7 +665,7 @@ export function PlayRoom() {
             <div className="flex shrink-0 flex-col gap-1">
               <button
                 type="button"
-                className="rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border)] px-2 py-1 text-xs font-semibold text-[var(--vtt-text-muted)] hover:border-[var(--vtt-gold)] hover:text-[var(--vtt-text)]"
+                className="vtt-btn-ghost h-8 px-2 py-1 text-xs"
                 onClick={() => {
                   setChatScrollToMessageId(mentionToast.messageId)
                   dismissMentionToast()

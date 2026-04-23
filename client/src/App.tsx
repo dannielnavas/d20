@@ -16,53 +16,51 @@ function Home() {
         <ThemeToggle />
       </div>
 
-      <main
-        id="inicio-contenido"
-        tabIndex={-1}
-        className="font-vtt-body flex flex-1 flex-col items-center justify-center px-5 py-16 outline-none"
-      >
-        <div className="relative w-full max-w-xl">
-          <div
-            className="pointer-events-none absolute -inset-3 rounded-2xl border border-[var(--vtt-border)] opacity-80"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute -left-6 top-1/2 hidden h-32 w-1 -translate-y-1/2 bg-gradient-to-b from-transparent via-[var(--vtt-gold)] to-transparent opacity-50 md:block"
-            aria-hidden
-          />
-
-          <header className="vtt-surface vtt-glow-border relative px-8 pb-10 pt-12 text-center md:px-12 md:text-left">
-            <img
-              src={logoSrc}
-              alt="d20 — Tu mesa. Tu historia. Tu aventura."
-              className="mx-auto mb-6 w-40 drop-shadow-[0_0_32px_rgba(201,164,58,0.45)] md:mx-0 md:w-52"
-              draggable={false}
+      <main id="inicio-contenido" tabIndex={-1} className="font-vtt-body flex flex-1 outline-none">
+        <div className="vtt-page-shell flex w-full flex-1 items-center justify-center py-16">
+          <div className="relative w-full max-w-xl">
+            <div
+              className="pointer-events-none absolute -inset-3 rounded-2xl border border-[var(--vtt-border)] opacity-80"
+              aria-hidden
             />
-            <p className="mx-auto mt-5 max-w-md text-pretty text-[var(--vtt-text-muted)] md:mx-0">
-              Ligero y en tiempo real. Como jugador eliges personaje en el vestíbulo; como Narrador
-              preparas mapa, cuadrícula y personajes no jugadores. La clave del Narrador se valida
-              de forma segura en el servidor. Si quieres, puedes proteger la mesa con una contraseña
-              que compartas solo con tu grupo (desde el panel del Narrador).
+            <div
+              className="pointer-events-none absolute -left-6 top-1/2 hidden h-32 w-1 -translate-y-1/2 bg-gradient-to-b from-transparent via-[var(--vtt-gold)] to-transparent opacity-50 md:block"
+              aria-hidden
+            />
+
+            <header className="vtt-panel relative px-8 pb-10 pt-12 text-center md:px-12 md:text-left">
+              <img
+                src={logoSrc}
+                alt="d20 — Tu mesa. Tu historia. Tu aventura."
+                className="mx-auto mb-6 w-40 drop-shadow-[0_0_26px_rgba(201,164,58,0.24)] md:mx-0 md:w-52"
+                draggable={false}
+              />
+              <p className="mx-auto mt-5 max-w-md text-pretty text-[var(--vtt-text-muted)] md:mx-0">
+                Ligero y en tiempo real. Como jugador eliges personaje en el vestíbulo; como Narrador
+                preparas mapa, cuadrícula y personajes no jugadores. La clave del Narrador se valida
+                de forma segura en el servidor. Si quieres, puedes proteger la mesa con una contraseña
+                que compartas solo con tu grupo (desde el panel del Narrador).
+              </p>
+            </header>
+
+            <nav
+              className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center md:justify-start"
+              aria-label="Accesos rápidos a la sala demo"
+            >
+              <Link to="/play/demo" className="vtt-btn-primary">
+                Entrar como jugador
+              </Link>
+              <Link to={dmDemoHref} className="vtt-btn-secondary">
+                Entrar como Narrador
+              </Link>
+            </nav>
+
+            <p className="mt-10 text-center text-xs text-[var(--vtt-text-muted)] md:text-left">
+              Consejo: abre dos ventanas en{' '}
+              <span className="font-mono text-[var(--vtt-gold-dim)]">/play/demo</span> para probar
+              varios jugadores.
             </p>
-          </header>
-
-          <nav
-            className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center md:justify-start"
-            aria-label="Accesos rápidos a la sala demo"
-          >
-            <Link to="/play/demo" className="vtt-btn-primary">
-              Entrar como jugador
-            </Link>
-            <Link to={dmDemoHref} className="vtt-btn-secondary">
-              Entrar como Narrador
-            </Link>
-          </nav>
-
-          <p className="mt-10 text-center text-xs text-[var(--vtt-text-muted)] md:text-left">
-            Consejo: abre dos ventanas en{' '}
-            <span className="font-mono text-[var(--vtt-gold-dim)]">/play/demo</span> para probar
-            varios jugadores.
-          </p>
+          </div>
         </div>
       </main>
     </div>
