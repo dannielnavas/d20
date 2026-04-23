@@ -1,4 +1,5 @@
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
+import logoSrc from './assets/ChatGPT Image 22 abr 2026, 19_11_27.png'
 import { ThemeToggle } from './components/ThemeToggle'
 import { DM_DEV_KEY } from './config'
 import { PlayRoom } from './pages/PlayRoom'
@@ -31,12 +32,12 @@ function Home() {
           />
 
           <header className="vtt-surface vtt-glow-border relative px-8 pb-10 pt-12 text-center md:px-12 md:text-left">
-            <p className="font-vtt-display text-[0.7rem] font-semibold uppercase tracking-[0.35em] text-[var(--vtt-gold-dim)]">
-              Mesa virtual
-            </p>
-            <h1 className="font-vtt-display mt-3 text-4xl font-semibold tracking-tight text-[var(--vtt-text)] md:text-5xl">
-              d20
-            </h1>
+            <img
+              src={logoSrc}
+              alt="d20 — Tu mesa. Tu historia. Tu aventura."
+              className="mx-auto mb-6 w-40 drop-shadow-[0_0_32px_rgba(201,164,58,0.45)] md:mx-0 md:w-52"
+              draggable={false}
+            />
             <p className="mx-auto mt-5 max-w-md text-pretty text-[var(--vtt-text-muted)] md:mx-0">
               Ligero y en tiempo real. Como jugador eliges personaje en el vestíbulo; como Narrador
               preparas mapa, cuadrícula y personajes no jugadores. La clave del Narrador se valida

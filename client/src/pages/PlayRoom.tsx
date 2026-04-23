@@ -6,6 +6,7 @@ import { PrivateNotesPanel } from '../components/chat/PrivateNotesPanel'
 import { DicePanel } from '../components/dice/DicePanel'
 import { DmHudColumn } from '../components/dm/DmHudColumn'
 import { InitiativePanel } from '../components/initiative/InitiativePanel'
+import { LoadingScreen } from '../components/LoadingScreen'
 import type { CharacterClaimCustomization } from '../components/lobby/CharacterLobby'
 import { CharacterLobby } from '../components/lobby/CharacterLobby'
 import { MediaDock } from '../components/media/MediaDock'
@@ -393,23 +394,7 @@ export function PlayRoom() {
           showMap || (showLobby && session?.role === 'player') ? 'pb-28' : ''
         }`}
       >
-        {showEpicLoading ? (
-          <div className="vtt-loading-epic" role="status" aria-live="polite" aria-atomic="true">
-            <div className="vtt-loading-epic__veil" aria-hidden="true" />
-            <div className="vtt-loading-epic__panel vtt-glass vtt-metal-frame vtt-depth-3">
-              <div className="vtt-loading-epic__sigil" aria-hidden="true">
-                <div className="vtt-loading-epic__ring vtt-loading-epic__ring--outer" />
-                <div className="vtt-loading-epic__ring vtt-loading-epic__ring--inner" />
-                <div className="vtt-loading-epic__core">d20</div>
-              </div>
-              <p className="vtt-loading-epic__eyebrow">{loadingLead}</p>
-              <h2 className="vtt-loading-epic__line">{loadingLine}</h2>
-              <p className="vtt-loading-epic__hint">
-                El Narrador está reuniendo mapa, fichas y secretos antes de abrir el telón.
-              </p>
-            </div>
-          </div>
-        ) : null}
+        <LoadingScreen visible={showEpicLoading} leadText={loadingLead} loadingText={loadingLine} />
 
         {state && turnTimer ? (
           <TurnTimerHud remaining={turnTimer.remaining} totalSeconds={turnTimer.totalSeconds} />
