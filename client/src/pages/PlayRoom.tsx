@@ -394,7 +394,7 @@ export function PlayRoom() {
           showMap || (showLobby && session?.role === 'player') ? 'pb-28' : ''
         }`}
       >
-        <LoadingScreen visible={showEpicLoading} leadText={loadingLead} loadingText={loadingLine} />
+        <LoadingScreen visible={showEpicLoading} />
 
         {state && turnTimer ? (
           <TurnTimerHud remaining={turnTimer.remaining} totalSeconds={turnTimer.totalSeconds} />
