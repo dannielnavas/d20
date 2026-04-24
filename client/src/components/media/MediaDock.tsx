@@ -238,24 +238,26 @@ function VideoThumb({
   const accent = frameColor ?? (isNarrator ? '#d4b061' : '#b48a3c')
   const shellClass = compact
     ? compactVariant === 'narrator'
-      ? 'relative aspect-video w-[min(42vw,10.5rem)] max-w-[46vw] shrink-0 overflow-visible bg-black sm:w-[11.75rem] sm:max-w-none'
+      ? 'relative h-[10.7rem] w-[19rem] shrink-0 overflow-visible'
       : featured
-        ? 'relative h-[7.9rem] w-[12.3rem] shrink-0 overflow-visible bg-black'
-        : 'relative h-[6.6rem] w-[10.4rem] shrink-0 overflow-visible bg-black'
-    : 'relative aspect-video w-[min(100%,11.4rem)] shrink-0 overflow-visible bg-black'
+        ? 'relative h-[10.7rem] w-[19rem] shrink-0 overflow-visible bg-transparent'
+        : 'relative h-[10.7rem] w-[19rem] shrink-0 overflow-visible bg-transparent'
+    : 'relative h-[10.7rem] w-[19rem] shrink-0 overflow-visible bg-transparent'
   const nameInitials = name
     .split(/\s+/)
     .map((part) => part[0] ?? '')
     .join('')
     .slice(0, 2)
     .toUpperCase()
+  const scrollName = (isNarrator ? 'Narrador' : name).replace(/^Tú\s·\s*/u, '')
 
   return (
     <div
       className={`${shellClass} vtt-media-thumb vtt-media-thumb--ornate ${isSpeaking ? 'vtt-media-thumb--speaking' : ''} ${isLeadSpeaker ? 'vtt-media-thumb--lead' : ''}`}
       style={{ '--vtt-thumb-accent': accent } as React.CSSProperties}
     >
-      <div className="vtt-media-thumb__camera-window relative h-full w-full overflow-hidden rounded-[0.72rem]">
+      <div className="vtt-media-thumb__frame-art" aria-hidden />
+      <div className="vtt-media-thumb__camera-window absolute overflow-hidden mt-[-13px] ml-[1px]">
         <video
           ref={ref}
           className={`h-full w-full object-cover transition-opacity duration-300 ${showPortrait ? 'opacity-0' : 'opacity-100'}`}
@@ -279,6 +281,11 @@ function VideoThumb({
           </div>
         ) : null}
       </div>
+      <div className="vtt-media-thumb__scroll-name pointer-events-none absolute left-1/2 top-[6.4%] z-[4] flex h-[8.3%] w-[35%] -translate-x-1/2 items-center justify-center px-2">
+        <p className="w-full truncate text-center font-vtt-display text-[0.47rem] font-semibold uppercase tracking-[0.12em] text-[#332116]">
+          {scrollName}
+        </p>
+      </div>
       {isSpeaking ? <span className="vtt-media-thumb__voice-waves" aria-hidden /> : null}
       {handRaised ? (
         <span
@@ -297,22 +304,6 @@ function VideoThumb({
           Narrador
         </div>
       ) : null}
-      <div className="vtt-media-thumb__nameplate pointer-events-none absolute bottom-0 left-1/2 z-[4] flex min-w-[72%] max-w-[92%] -translate-x-1/2 translate-y-[46%] items-center gap-1.5 px-2.5 py-1">
-        {!isNarrator ? (
-          <span className="vtt-media-thumb__nameplate-avatar flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full border border-black/40 bg-[rgba(10,8,6,0.8)]">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <span className="font-vtt-display text-[0.5rem] font-semibold tracking-[0.08em] text-[var(--vtt-text)]">
-                {nameInitials}
-              </span>
-            )}
-          </span>
-        ) : null}
-        <p className="truncate text-center font-vtt-display text-[0.52rem] font-semibold uppercase tracking-[0.19em] text-[#ece5d6]">
-          {isNarrator ? 'Narrador' : name}
-        </p>
-      </div>
     </div>
   )
 }
@@ -962,7 +953,7 @@ export function MediaDock({
         {showNarratorStage && narratorParticipant ? (
           <div className="pointer-events-none absolute inset-x-0 top-0 z-[88] flex justify-center px-2 pt-2">
             <div
-              className="vtt-media-dock-map-narrator pointer-events-auto rounded-[var(--vtt-radius-sm)] p-1"
+              className=" pointer-events-auto rounded-[var(--vtt-radius-sm)] p-1"
               style={{ paddingTop: 'max(0.35rem, env(safe-area-inset-top, 0px))' }}
             >
               <VideoThumb
@@ -990,8 +981,8 @@ export function MediaDock({
 
         {mapDockExpanded || showSelfPip ? (
           <div
-            className={`pointer-events-auto absolute left-2 z-[87] flex min-h-0 w-[min(11.5rem,calc(100vw-6.5rem))] max-w-[38vw] flex-col gap-2 overflow-y-auto overscroll-contain ${leftStackMaxH}`}
-            style={{ bottom: 'max(4.35rem, calc(env(safe-area-inset-bottom, 0px) + 4.35rem))' }}
+            className={`pointer-events-auto absolute left-2 z-[87] flex min-h-0 flex-col gap-2 overflow-y-auto overscroll-contain ${leftStackMaxH}`}
+            style={{ bottom: 'max(4.35rem, calc(env(safe-area-inset-bottom, 0px) + 4.35rem))', maxWidth: '20rem' }}
           >
             {mapDockExpanded ? (
               <div className="vtt-media-dock-map-rail flex shrink-0 flex-col gap-2 rounded-[var(--vtt-radius)] px-2 py-2">
@@ -1031,7 +1022,7 @@ export function MediaDock({
               </div>
             ) : null}
             {showSelfPip && session.role === 'dm' && localStream ? (
-              <div className="vtt-media-dock-map-self-pip pointer-events-auto shrink-0 rounded-[var(--vtt-radius-sm)] p-1">
+              <div className=" pointer-events-auto shrink-0 rounded-[var(--vtt-radius-sm)] p-1 w-full">
                 <VideoThumb
                   stream={localStream}
                   name={`Tú · ${label}`}
@@ -1046,7 +1037,7 @@ export function MediaDock({
                 />
               </div>
             ) : showSelfPip && selfSideParticipant ? (
-              <div className="vtt-media-dock-map-self-pip pointer-events-auto shrink-0 rounded-[var(--vtt-radius-sm)] p-1">
+              <div className=" pointer-events-auto shrink-0 rounded-[var(--vtt-radius-sm)] p-1 w-full">
                 <VideoThumb
                   stream={selfSideParticipant.stream}
                   name={`Tú · ${label}`}
@@ -1065,7 +1056,7 @@ export function MediaDock({
         ) : null}
 
         <div
-          className="vtt-media-dock-map-bottombar pointer-events-auto absolute bottom-0 left-1/2 z-[89] flex w-[min(28rem,calc(100vw-0.75rem))] -translate-x-1/2 flex-col items-center gap-1 rounded-t-[var(--vtt-radius-sm)] px-2 py-1"
+          className="vtt-media-dock-map-bottombar pointer-events-auto absolute bottom-0 left-1/2 z-[89] flex max-w-[28rem] -translate-x-1/2 flex-col items-center gap-1 rounded-t-[var(--vtt-radius-sm)] px-2 py-1"
           style={{ paddingBottom: 'max(0.2rem, env(safe-area-inset-bottom, 0px))' }}
         >
           {mediaErr && !mapDockExpanded ? (
