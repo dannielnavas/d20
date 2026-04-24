@@ -10,8 +10,6 @@ import {
   IconMicOff,
   IconMicOn,
 } from './media-icons'
-import { PresenceStrip } from './PresenceStrip'
-
 export type MediaDockLayout = 'lobby' | 'map'
 
 type MediaDockProps = {
@@ -20,7 +18,6 @@ type MediaDockProps = {
   roomState: RoomState
   layout: MediaDockLayout
   playerSessionId?: string | null
-  isDm?: boolean
 }
 
 type RemoteTile = {
@@ -207,6 +204,7 @@ function VideoThumb({
   muted,
   compact,
   featured,
+  compactVariant = 'default',
   handRaised,
   isNarrator = false,
 }: {
@@ -219,6 +217,8 @@ function VideoThumb({
   muted?: boolean
   compact: boolean
   featured?: boolean
+  /** En mapa: `narrator` = tile arriba (compacto); `default` / `featured` = carril / PIP. */
+  compactVariant?: 'default' | 'featured' | 'narrator'
   handRaised?: boolean
   isNarrator?: boolean
 }) {
@@ -237,9 +237,11 @@ function VideoThumb({
 
   const accent = frameColor ?? (isNarrator ? '#d4b061' : '#b48a3c')
   const shellClass = compact
-    ? featured
-      ? 'relative h-[7.9rem] w-[12.3rem] shrink-0 overflow-visible bg-black'
-      : 'relative h-[6.6rem] w-[10.4rem] shrink-0 overflow-visible bg-black'
+    ? compactVariant === 'narrator'
+      ? 'relative aspect-video w-[min(42vw,10.5rem)] max-w-[46vw] shrink-0 overflow-visible bg-black sm:w-[11.75rem] sm:max-w-none'
+      : featured
+        ? 'relative h-[7.9rem] w-[12.3rem] shrink-0 overflow-visible bg-black'
+        : 'relative h-[6.6rem] w-[10.4rem] shrink-0 overflow-visible bg-black'
     : 'relative aspect-video w-[min(100%,11.4rem)] shrink-0 overflow-visible bg-black'
   const nameInitials = name
     .split(/\s+/)
@@ -321,7 +323,6 @@ export function MediaDock({
   roomState,
   layout,
   playerSessionId = null,
-  isDm = false,
 }: MediaDockProps) {
   const mapDockPanelId = 'vtt-media-map-panel'
   const label = useMemo(() => localDisplayName(session, roomState), [session, roomState])
@@ -761,6 +762,22 @@ export function MediaDock({
 
   const participants = useMemo(() => mapParticipants?.all ?? [], [mapParticipants])
   const participantsCount = participants.length
+  const narratorParticipant = useMemo(
+    () => participants.find((p) => p.isNarrator) ?? null,
+    [participants],
+  )
+  const sideParticipants = useMemo(
+    () => participants.filter((p) => !p.isNarrator),
+    [participants],
+  )
+  const selfSideParticipant = useMemo(
+    () => sideParticipants.find((p) => p.id === 'local') ?? null,
+    [sideParticipants],
+  )
+  const remoteSideParticipants = useMemo(
+    () => sideParticipants.filter((p) => p.id !== 'local'),
+    [sideParticipants],
+  )
   const speakingLevels = useSpeakingLevels(participants)
   const activeSpeakerId = useMemo(() => {
     let topId: string | null = null
@@ -775,68 +792,97 @@ export function MediaDock({
     return topId
   }, [participants, speakingLevels])
 
+  const callToolbarInner = !inCall ? (
+    <>
+      <MediaIconBtn
+        label="Habilitar cámara y unirme"
+        title="Habilitar cámara y unirme"
+        onClick={() => void joinCall(true)}
+        variant="primary"
+      >
+        <IconJoinCall className="size-[1.15rem]" />
+      </MediaIconBtn>
+      <MediaIconBtn
+        label="Unirme solo con micrófono"
+        title="Unirme solo con micrófono"
+        onClick={() => void joinCall(false)}
+      >
+        <IconMicOn className="size-[1.05rem]" />
+      </MediaIconBtn>
+    </>
+  ) : (
+    <>
+      <MediaIconBtn
+        label={micOn ? 'Silenciar micrófono' : 'Activar micrófono'}
+        title={micOn ? 'Silenciar micrófono' : 'Activar micrófono'}
+        onClick={() => setMicOn((value) => !value)}
+        pressed={micOn}
+        off={!micOn}
+      >
+        {micOn ? (
+          <IconMicOn className="size-[1.05rem]" />
+        ) : (
+          <IconMicOff className="size-[1.05rem]" />
+        )}
+      </MediaIconBtn>
+      <MediaIconBtn
+        label={camOn ? 'Apagar cámara' : 'Encender cámara'}
+        title={camOn ? 'Apagar cámara' : 'Encender cámara'}
+        onClick={() => void toggleCamera()}
+        pressed={camOn}
+        off={!camOn}
+      >
+        {camOn ? (
+          <IconCamOn className="size-[1.05rem]" />
+        ) : (
+          <IconCamOff className="size-[1.05rem]" />
+        )}
+      </MediaIconBtn>
+      <MediaIconBtn
+        label="Colgar y salir de la llamada"
+        title="Colgar y salir de la llamada"
+        onClick={leaveCall}
+        variant="danger"
+      >
+        <IconHangUp className="size-[1.1rem]" />
+      </MediaIconBtn>
+    </>
+  )
+
   const toolbar = (
     <div
       className="flex flex-wrap items-center justify-center gap-2"
       role="toolbar"
       aria-label="Controles de llamada"
     >
-      {!inCall ? (
-        <>
-          <MediaIconBtn
-            label="Habilitar cámara y unirme"
-            title="Habilitar cámara y unirme"
-            onClick={() => void joinCall(true)}
-            variant="primary"
-          >
-            <IconJoinCall className="size-[1.15rem]" />
-          </MediaIconBtn>
-          <MediaIconBtn
-            label="Unirme solo con micrófono"
-            title="Unirme solo con micrófono"
-            onClick={() => void joinCall(false)}
-          >
-            <IconMicOn className="size-[1.05rem]" />
-          </MediaIconBtn>
-        </>
-      ) : (
-        <>
-          <MediaIconBtn
-            label={micOn ? 'Silenciar micrófono' : 'Activar micrófono'}
-            title={micOn ? 'Silenciar micrófono' : 'Activar micrófono'}
-            onClick={() => setMicOn((value) => !value)}
-            pressed={micOn}
-            off={!micOn}
-          >
-            {micOn ? (
-              <IconMicOn className="size-[1.05rem]" />
-            ) : (
-              <IconMicOff className="size-[1.05rem]" />
-            )}
-          </MediaIconBtn>
-          <MediaIconBtn
-            label={camOn ? 'Apagar cámara' : 'Encender cámara'}
-            title={camOn ? 'Apagar cámara' : 'Encender cámara'}
-            onClick={() => void toggleCamera()}
-            pressed={camOn}
-            off={!camOn}
-          >
-            {camOn ? (
-              <IconCamOn className="size-[1.05rem]" />
-            ) : (
-              <IconCamOff className="size-[1.05rem]" />
-            )}
-          </MediaIconBtn>
-          <MediaIconBtn
-            label="Colgar y salir de la llamada"
-            title="Colgar y salir de la llamada"
-            onClick={leaveCall}
-            variant="danger"
-          >
-            <IconHangUp className="size-[1.1rem]" />
-          </MediaIconBtn>
-        </>
-      )}
+      {callToolbarInner}
+    </div>
+  )
+
+  const canRaiseHandOnMap =
+    session.role === 'player' && session.claimedTokenId !== null && Boolean(playerSessionId)
+
+  const mapCallToolbar = (
+    <div
+      className="vtt-media-dock-map-toolbar flex flex-wrap items-center justify-center gap-1.5"
+      role="toolbar"
+      aria-label="Controles de llamada y mano levantada"
+    >
+      {canRaiseHandOnMap ? (
+        <button
+          type="button"
+          className={`vtt-media-icon-btn vtt-media-dock-map-raise ${localHandRaised ? 'vtt-media-dock-map-raise--on' : ''}`}
+          aria-label={localHandRaised ? 'Bajar la mano' : 'Levantar la mano'}
+          title={localHandRaised ? 'Bajar la mano' : 'Levantar la mano'}
+          aria-pressed={localHandRaised}
+          onClick={() => socket.emit('raiseHand', { raised: !localHandRaised })}
+        >
+          <span className="text-[0.92rem] leading-none" aria-hidden>
+            ✋
+          </span>
+        </button>
+      ) : null}
+      {callToolbarInner}
     </div>
   )
 
@@ -883,58 +929,155 @@ export function MediaDock({
   ) : null
 
   if (layout === 'map') {
+    const showNarratorStage = Boolean(
+      inCall && localStream && narratorParticipant && narratorParticipant.id !== 'local',
+    )
+    const showSelfPip = Boolean(
+      inCall && localStream && (session.role === 'dm' || Boolean(selfSideParticipant)),
+    )
+    const leftStackMaxH = showNarratorStage
+      ? 'max-h-[min(56svh,calc(100%-min(28svh,10rem)-6.5rem))]'
+      : 'max-h-[min(72svh,calc(100%-7rem))]'
+    const mapDockToggle = (
+      <button
+        type="button"
+        className="flex w-full max-w-[12.5rem] shrink-0 items-center justify-between gap-1.5 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-bg-elevated)]/85 px-2 py-0.5 text-left"
+        onClick={() => setMapDockExpanded((prev) => !prev)}
+        aria-expanded={mapDockExpanded}
+        aria-label={
+          mapDockExpanded ? 'Ocultar lista de llamada y cámaras de otros' : 'Mostrar llamada de mesa'
+        }
+      >
+        <span className="font-vtt-display text-[0.52rem] font-semibold uppercase leading-tight tracking-[0.16em] text-[var(--vtt-gold)]">
+          Llamada
+        </span>
+        <span className="shrink-0 text-[0.58rem] text-[var(--vtt-text-muted)]">
+          {inCall ? `${mapDockExpanded ? '−' : '+'} ${participantsCount}` : 'Off'}
+        </span>
+      </button>
+    )
+
     return (
       <div className="pointer-events-none absolute inset-0 z-[86]" aria-label="Mesa de voz y cámara">
-        <div
-          className="vtt-media-dock-map-shell pointer-events-auto absolute bottom-0 left-1/2 z-[87] w-[min(48rem,calc(100vw-1rem))] -translate-x-1/2 rounded-t-[var(--vtt-radius)] px-2 py-2"
-          style={{ paddingBottom: 'max(0.35rem, env(safe-area-inset-bottom, 0px))' }}
-        >
-          <button
-            type="button"
-            className="mb-2 flex w-full items-center justify-between rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-bg-elevated)]/70 px-2.5 py-1.5 text-left"
-            onClick={() => setMapDockExpanded((prev) => !prev)}
-            aria-expanded={mapDockExpanded}
-            aria-controls={mapDockPanelId}
-            aria-label={
-              mapDockExpanded ? 'Ocultar controles y cámaras de llamada' : 'Mostrar llamada de mesa'
-            }
-          >
-            <span className="font-vtt-display text-[0.64rem] font-semibold uppercase tracking-[0.18em] text-[var(--vtt-gold)]">
-              Llamada de mesa
-            </span>
-            <span className="text-xs text-[var(--vtt-text-muted)]">
-              {inCall
-                ? `${mapDockExpanded ? 'Ocultar' : 'Mostrar'} · ${participantsCount} en llamada`
-                : 'Desconectado'}
-            </span>
-          </button>
-          <div
-            id={mapDockPanelId}
-            role="region"
-            aria-label="Panel de llamada y camaras de la mesa"
-            className={`vtt-media-dock-map-content ${mapDockExpanded ? 'block' : 'hidden'}`}
-          >
-            {mediaErr ? (
-              <p
-                role="alert"
-                className="mb-2 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-danger-border)] bg-[var(--vtt-danger-bg)] px-3 py-2 text-xs text-[var(--vtt-danger-text)]"
-              >
-                {mediaErr}
-              </p>
-            ) : null}
-            {mapDockExpanded ? (
-              <PresenceStrip
-                socket={socket}
-                roomState={roomState}
-                session={session}
-                isDm={isDm}
-                playerSessionId={playerSessionId}
+        {showNarratorStage && narratorParticipant ? (
+          <div className="pointer-events-none absolute inset-x-0 top-0 z-[88] flex justify-center px-2 pt-2">
+            <div
+              className="vtt-media-dock-map-narrator pointer-events-auto rounded-[var(--vtt-radius-sm)] p-1"
+              style={{ paddingTop: 'max(0.35rem, env(safe-area-inset-top, 0px))' }}
+            >
+              <VideoThumb
+                stream={narratorParticipant.stream}
+                name={
+                  narratorParticipant.id === 'local'
+                    ? `Tú · ${label}`
+                    : narratorParticipant.label
+                }
+                avatarUrl={
+                  narratorParticipant.id === 'local' ? avatarUrl : narratorParticipant.avatarUrl
+                }
+                frameColor={narratorParticipant.frameColor}
+                isSpeaking={(speakingLevels[narratorParticipant.id] ?? 0) > 0.055}
+                isLeadSpeaker={activeSpeakerId === narratorParticipant.id}
+                muted={narratorParticipant.muted}
                 compact
+                compactVariant="narrator"
+                handRaised={narratorParticipant.id === 'local' ? localHandRaised : false}
+                isNarrator
               />
-            ) : null}
-            {mapDockExpanded && inCall && filmstrip ? <div className="mb-2">{filmstrip}</div> : null}
+            </div>
           </div>
-          {toolbar}
+        ) : null}
+
+        {mapDockExpanded || showSelfPip ? (
+          <div
+            className={`pointer-events-auto absolute left-2 z-[87] flex min-h-0 w-[min(11.5rem,calc(100vw-6.5rem))] max-w-[38vw] flex-col gap-2 overflow-y-auto overscroll-contain ${leftStackMaxH}`}
+            style={{ bottom: 'max(4.35rem, calc(env(safe-area-inset-bottom, 0px) + 4.35rem))' }}
+          >
+            {mapDockExpanded ? (
+              <div className="vtt-media-dock-map-rail flex shrink-0 flex-col gap-2 rounded-[var(--vtt-radius)] px-2 py-2">
+                <div
+                  id={mapDockPanelId}
+                  role="region"
+                  aria-label="Cámaras de otros jugadores"
+                  className="vtt-media-dock-map-content flex flex-col gap-2"
+                >
+                  {mediaErr ? (
+                    <p
+                      role="alert"
+                      className="shrink-0 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-danger-border)] bg-[var(--vtt-danger-bg)] px-2 py-1.5 text-[0.65rem] text-[var(--vtt-danger-text)]"
+                    >
+                      {mediaErr}
+                    </p>
+                  ) : null}
+                  {inCall && remoteSideParticipants.length > 0 ? (
+                    <div className="vtt-media-filmstrip vtt-media-filmstrip--map-rail flex min-h-0 flex-col gap-2 pb-1 pt-1">
+                      {remoteSideParticipants.map((p) => (
+                        <VideoThumb
+                          key={p.id}
+                          stream={p.stream}
+                          name={p.label}
+                          avatarUrl={p.avatarUrl}
+                          frameColor={p.frameColor}
+                          isSpeaking={(speakingLevels[p.id] ?? 0) > 0.055}
+                          isLeadSpeaker={activeSpeakerId === p.id}
+                          muted={p.muted}
+                          compact
+                          isNarrator={false}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+            {showSelfPip && session.role === 'dm' && localStream ? (
+              <div className="vtt-media-dock-map-self-pip pointer-events-auto shrink-0 rounded-[var(--vtt-radius-sm)] p-1">
+                <VideoThumb
+                  stream={localStream}
+                  name={`Tú · ${label}`}
+                  avatarUrl={avatarUrl}
+                  frameColor={frameColor}
+                  isSpeaking={(speakingLevels.local ?? 0) > 0.055}
+                  isLeadSpeaker={activeSpeakerId === 'local'}
+                  muted
+                  compact
+                  handRaised={localHandRaised}
+                  isNarrator={false}
+                />
+              </div>
+            ) : showSelfPip && selfSideParticipant ? (
+              <div className="vtt-media-dock-map-self-pip pointer-events-auto shrink-0 rounded-[var(--vtt-radius-sm)] p-1">
+                <VideoThumb
+                  stream={selfSideParticipant.stream}
+                  name={`Tú · ${label}`}
+                  avatarUrl={avatarUrl}
+                  frameColor={selfSideParticipant.frameColor}
+                  isSpeaking={(speakingLevels[selfSideParticipant.id] ?? 0) > 0.055}
+                  isLeadSpeaker={activeSpeakerId === selfSideParticipant.id}
+                  muted={selfSideParticipant.muted}
+                  compact
+                  handRaised={localHandRaised}
+                  isNarrator={false}
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div
+          className="vtt-media-dock-map-bottombar pointer-events-auto absolute bottom-0 left-1/2 z-[89] flex w-[min(28rem,calc(100vw-0.75rem))] -translate-x-1/2 flex-col items-center gap-1 rounded-t-[var(--vtt-radius-sm)] px-2 py-1"
+          style={{ paddingBottom: 'max(0.2rem, env(safe-area-inset-bottom, 0px))' }}
+        >
+          {mediaErr && !mapDockExpanded ? (
+            <p
+              role="alert"
+              className="max-w-md rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-danger-border)] bg-[var(--vtt-danger-bg)] px-2 py-1 text-center text-[0.58rem] text-[var(--vtt-danger-text)]"
+            >
+              {mediaErr}
+            </p>
+          ) : null}
+          {mapDockToggle}
+          {mapCallToolbar}
         </div>
       </div>
     )
@@ -951,19 +1094,13 @@ export function MediaDock({
             Voz y cámara
           </h2>
           <p className="mt-1 max-w-md text-[0.7rem] leading-relaxed text-[var(--vtt-text-muted)]">
-            Conexión entre navegadores. En el mapa la barra queda fija abajo.
+            Conexión entre navegadores. En el mapa: si el narrador está en otra pestaña su cámara va
+            arriba; la tuya abajo a la izquierda como el resto; otras cámaras al expandir «Llamada» a
+            la izquierda; mano y controles compactos abajo al centro.
           </p>
         </div>
         <div className="shrink-0 pt-2 sm:pt-0">{toolbar}</div>
       </div>
-
-      <PresenceStrip
-        socket={socket}
-        roomState={roomState}
-        session={session}
-        isDm={isDm}
-        playerSessionId={playerSessionId}
-      />
 
       {errBlock}
       {filmstrip ? <div className="-mx-1 mt-2">{filmstrip}</div> : null}

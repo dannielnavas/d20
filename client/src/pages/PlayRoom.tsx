@@ -484,7 +484,6 @@ export function PlayRoom() {
               roomState={state}
               layout="lobby"
               playerSessionId={!wantsDm && !wantsSpectator ? playerSessionId : null}
-              isDm={session.role === 'dm'}
             />
           </div>
         ) : null}
@@ -512,7 +511,6 @@ export function PlayRoom() {
                 roomState={state}
                 layout="map"
                 playerSessionId={!wantsDm && !wantsSpectator ? playerSessionId : null}
-                isDm={session.role === 'dm'}
               />
             ) : null}
           </div>
