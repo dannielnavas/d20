@@ -103,6 +103,7 @@ export function PlayRoom() {
 
   useInitiativeTurnNotify(state, session)
 
+  const [dmScreen, setDmScreen] = useState('mesa')
   const [chatExpanded, setChatExpanded] = useState(true)
   const [chatScrollToMessageId, setChatScrollToMessageId] = useState<string | null>(null)
   const { toast: mentionToast, dismissToast: dismissMentionToast } = useChatMentionNotify(
@@ -172,6 +173,7 @@ export function PlayRoom() {
   }, [pendingClaimCustomization, session?.claimedTokenId, socket])
 
   const isDm = session?.role === 'dm'
+  const isPlayer = session?.role === 'player'
 
   const onInitiativeToggleVisibility = useCallback(
     (visible: boolean) => {
@@ -269,58 +271,58 @@ export function PlayRoom() {
   const showEpicLoading = !error && !passwordGate && (!joinPayload || !state || !session)
 
   return (
-    <div className="font-vtt-body flex min-h-svh flex-col gap-4 px-4 py-4 text-left md:px-6">
+    <div
+      className={`font-vtt-body flex min-h-svh flex-col gap-3 px-3 py-3 text-left md:px-5 ${
+        isDm ? 'd20-dm-redesign' : isPlayer ? 'd20-player-redesign' : ''
+      }`}
+    >
       <a href="#contenido-sala" className="skip-link">
         Saltar al contenido de la sala
       </a>
 
-      <header className="vtt-panel shrink-0 px-4 py-4 md:px-5">
+      <header
+        className={`d20-playroom-topbar vtt-panel shrink-0 px-4 py-2.5 md:px-5 ${
+          isDm ? 'd20-dm-topbar' : isPlayer ? 'd20-player-topbar' : ''
+        }`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="vtt-eyebrow">Sala activa</p>
-            <p className="font-vtt-display mt-1 text-xl font-semibold tracking-wide text-[var(--vtt-text)]">
-              <span className="font-mono text-[0.95em] font-normal text-[var(--vtt-gold)]">
-                {roomId || 'Sin identificador'}
+          {/* Left: breadcrumb sala */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="d20-playroom-logo">d20</span>
+              <span className="text-[var(--vtt-border-subtle)]">/</span>
+              <span className="font-mono text-sm font-semibold text-[var(--vtt-text)] tracking-tight">
+                {roomId || '—'}
               </span>
-            </p>
+            </div>
             {session ? (
-              <>
-                <p className="mt-2 text-sm text-[var(--vtt-text-muted)]">{sessionLabel}</p>
-                {session.role === 'player' &&
-                session.claimedTokenId &&
-                notificationPermission === 'default' ? (
-                  <button
-                    type="button"
-                    className="mt-2 text-left text-xs font-semibold text-[var(--vtt-gold)] underline decoration-[var(--vtt-gold-dim)] underline-offset-2 hover:text-[var(--vtt-text)]"
-                    onClick={() => {
-                      void Notification.requestPermission().then((p) =>
-                        setNotificationPermission(p),
-                      )
-                    }}
-                  >
-                    Activar avisos del navegador cuando sea tu turno
-                  </button>
-                ) : null}
-                {session.role === 'player' &&
-                session.claimedTokenId &&
-                notificationPermission === 'denied' ? (
-                  <p className="mt-2 max-w-md text-xs text-[var(--vtt-text-muted)]">
-                    Notificaciones bloqueadas en el navegador. Si quieres avisos de turno, permite
-                    notificaciones para este sitio en la configuración del navegador.
-                  </p>
-                ) : null}
-              </>
+              <div className="d20-playroom-role-badge">
+                {session.role === 'dm' ? '🎲 Narrador' : session.role === 'spectator' ? '👁 Espectador' : session.claimedTokenId ? '⚔️ En mesa' : '⏳ Lobby'}
+              </div>
+            ) : null}
+            {session?.role === 'player' && session.claimedTokenId && notificationPermission === 'default' ? (
+              <button
+                type="button"
+                className="hidden md:block text-xs font-semibold text-[var(--vtt-gold)] underline underline-offset-2 hover:text-[var(--vtt-text)]"
+                onClick={() => {
+                  void Notification.requestPermission().then((p) => setNotificationPermission(p))
+                }}
+              >
+                Activar avisos de turno
+              </button>
             ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+
+          {/* Right: controles */}
+          <div className="flex flex-wrap items-center gap-2">
             {isDm ? (
               <button
                 type="button"
-                className="vtt-btn-ghost disabled:cursor-not-allowed disabled:opacity-50"
+                className="vtt-btn-ghost text-xs disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={onResetDiceLog}
                 disabled={!state || state.diceLog.length === 0}
               >
-                Borrar historial de tiradas
+                Borrar tiradas
               </button>
             ) : null}
             <ThemeToggle />
@@ -328,20 +330,14 @@ export function PlayRoom() {
               role="status"
               aria-live="polite"
               aria-atomic="true"
-              className="vtt-pill text-sm"
+              className="d20-connection-pill"
             >
               <span className="sr-only">Estado de conexión: </span>
-              <span
-                className={
-                  connected
-                    ? 'vtt-status-dot mr-1.5 bg-[var(--vtt-forest)]'
-                    : 'vtt-status-dot mr-1.5 bg-[var(--vtt-ember)]'
-                }
-              />
-              <span>{connected ? 'Conectado' : 'Conectando…'}</span>
+              <span className={connected ? 'd20-conn-dot d20-conn-dot--on' : 'd20-conn-dot d20-conn-dot--off'} />
+              <span className="text-xs font-medium">{connected ? 'Conectado' : 'Conectando…'}</span>
             </div>
             <Link to="/" className="vtt-link text-sm font-semibold">
-              Inicio
+              ← Inicio
             </Link>
           </div>
         </div>
@@ -368,7 +364,13 @@ export function PlayRoom() {
         id="contenido-sala"
         tabIndex={-1}
         className={`relative flex min-h-0 w-full flex-1 flex-col items-center gap-6 outline-none ${
-          showMap || (showLobby && session?.role === 'player') ? 'pb-28' : ''
+          isDm
+            ? 'd20-dm-main pb-6'
+            : isPlayer
+              ? 'd20-player-main pb-24'
+              : showMap || (showLobby && session?.role === 'player')
+                ? 'pb-28'
+                : ''
         }`}
       >
         <LoadingScreen visible={showEpicLoading} />
@@ -493,7 +495,7 @@ export function PlayRoom() {
         )}
 
         {showMap && state && socket ? (
-          <div className={`${mapInteractionShellClass} relative`}>
+          <div className={`${mapInteractionShellClass} relative ${isDm ? 'd20-dm-map-shell' : ''}`}>
             <MapBoard
               socket={socket}
               roomState={state}
@@ -503,6 +505,8 @@ export function PlayRoom() {
               isSpectator={session?.role === 'spectator'}
               suppressDmMapVideoChrome={isDm}
               showReactionPalette={false}
+              dmScreen={dmScreen}
+              onDmScreenChange={setDmScreen}
             />
             {session ? (
               <MediaDock
@@ -511,6 +515,7 @@ export function PlayRoom() {
                 roomState={state}
                 layout="map"
                 playerSessionId={!wantsDm && !wantsSpectator ? playerSessionId : null}
+                hidden={isDm && dmScreen !== 'mesa'}
               />
             ) : null}
           </div>

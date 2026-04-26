@@ -18,6 +18,7 @@ type MediaDockProps = {
   roomState: RoomState
   layout: MediaDockLayout
   playerSessionId?: string | null
+  hidden?: boolean
 }
 
 type RemoteTile = {
@@ -238,11 +239,11 @@ function VideoThumb({
   const accent = frameColor ?? (isNarrator ? '#d4b061' : '#b48a3c')
   const shellClass = compact
     ? compactVariant === 'narrator'
-      ? 'relative h-[10.7rem] w-[19rem] shrink-0 overflow-visible'
+      ? 'relative aspect-[19/10.7] w-[19rem] max-w-[80vw] shrink-0 overflow-visible'
       : featured
-        ? 'relative h-[10.7rem] w-[19rem] shrink-0 overflow-visible bg-transparent'
-        : 'relative h-[10.7rem] w-[19rem] shrink-0 overflow-visible bg-transparent'
-    : 'relative h-[10.7rem] w-[19rem] shrink-0 overflow-visible bg-transparent'
+        ? 'relative aspect-[19/10.7] w-full shrink-0 overflow-visible bg-transparent'
+        : 'relative aspect-[19/10.7] w-[19rem] max-w-[80vw] shrink-0 overflow-visible bg-transparent'
+    : 'relative aspect-[19/10.7] w-[19rem] max-w-[80vw] shrink-0 overflow-visible bg-transparent'
   const nameInitials = name
     .split(/\s+/)
     .map((part) => part[0] ?? '')
@@ -257,7 +258,7 @@ function VideoThumb({
       style={{ '--vtt-thumb-accent': accent } as React.CSSProperties}
     >
       <div className="vtt-media-thumb__frame-art" aria-hidden />
-      <div className="vtt-media-thumb__camera-window absolute overflow-hidden mt-[-13px] ml-[1px]">
+      <div className="vtt-media-thumb__camera-window absolute overflow-hidden">
         <video
           ref={ref}
           className={`h-full w-full object-cover transition-opacity duration-300 ${showPortrait ? 'opacity-0' : 'opacity-100'}`}
@@ -296,14 +297,7 @@ function VideoThumb({
           ✋
         </span>
       ) : null}
-      {isNarrator ? (
-        <div
-          className="pointer-events-none absolute left-1/2 top-1 z-[3] -translate-x-1/2 rounded-full px-2 py-0.5 font-vtt-display text-[0.45rem] font-semibold uppercase tracking-[0.24em] text-[var(--vtt-bg)]"
-          style={{ backgroundColor: accent }}
-        >
-          Narrador
-        </div>
-      ) : null}
+
     </div>
   )
 }
@@ -314,6 +308,7 @@ export function MediaDock({
   roomState,
   layout,
   playerSessionId = null,
+  hidden = false,
 }: MediaDockProps) {
   const mapDockPanelId = 'vtt-media-map-panel'
   const label = useMemo(() => localDisplayName(session, roomState), [session, roomState])
@@ -416,7 +411,7 @@ export function MediaDock({
   )
 
   useEffect(() => {
-    if (!inCall || !localStream) return
+    if (!inCall) return
 
     const onSnapshot = async (msg: {
       peers: {
@@ -588,10 +583,17 @@ export function MediaDock({
     }
 
     const onDisconnect = () => {
-      setMediaErr('Se cortó la conexión; la llamada se cerró.')
-      localStreamRef.current?.getTracks().forEach((track) => track.stop())
-      setLocalStream(null)
-      setInCall(false)
+      // No cerramos la llamada, solo avisamos. socket.io reconectará automáticamente.
+      setMediaErr('Se cortó la conexión con el servidor. Reconectando...')
+    }
+
+    const onConnect = () => {
+      setMediaErr(null)
+      socket.emit('mediaJoin', {
+        displayName: labelRef.current,
+        avatarUrl: avatarRef.current,
+        frameColor: frameColorRef.current,
+      })
     }
 
     socket.on('mediaPeersSnapshot', onSnapshot)
@@ -601,6 +603,7 @@ export function MediaDock({
     socket.on('webrtcSignal', onSignal)
     socket.on('mediaError', onMediaErr)
     socket.on('disconnect', onDisconnect)
+    socket.on('connect', onConnect)
 
     socket.emit('mediaJoin', {
       displayName: labelRef.current,
@@ -616,11 +619,13 @@ export function MediaDock({
       socket.off('webrtcSignal', onSignal)
       socket.off('mediaError', onMediaErr)
       socket.off('disconnect', onDisconnect)
+      socket.off('connect', onConnect)
       if (socket.connected) socket.emit('mediaLeave')
       closeAllPeers()
       localStreamRef.current?.getTracks().forEach((track) => track.stop())
     }
-  }, [closeAllPeers, flushIce, getOrCreatePc, inCall, localStream, removeRemote, socket])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [closeAllPeers, flushIce, getOrCreatePc, inCall, removeRemote, socket])
 
   useEffect(() => {
     if (!socket || !socket.connected || !inCall) return
@@ -949,7 +954,7 @@ export function MediaDock({
     )
 
     return (
-      <div className="pointer-events-none absolute inset-0 z-[86]" aria-label="Mesa de voz y cámara">
+      <div className={`pointer-events-none absolute inset-0 z-[86] ${hidden ? 'hidden' : ''}`} aria-label="Mesa de voz y cámara">
         {showNarratorStage && narratorParticipant ? (
           <div className="pointer-events-none absolute inset-x-0 top-0 z-[88] flex justify-center px-2 pt-2">
             <div
@@ -981,8 +986,8 @@ export function MediaDock({
 
         {mapDockExpanded || showSelfPip ? (
           <div
-            className={`pointer-events-auto absolute left-2 z-[87] flex min-h-0 flex-col gap-2 overflow-y-auto overscroll-contain ${leftStackMaxH}`}
-            style={{ bottom: 'max(4.35rem, calc(env(safe-area-inset-bottom, 0px) + 4.35rem))', maxWidth: '20rem' }}
+            className={`pointer-events-auto absolute left-2 z-[87] flex min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain hide-scrollbar ${leftStackMaxH}`}
+            style={{ bottom: 'max(4.35rem, calc(env(safe-area-inset-bottom, 0px) + 4.35rem))', width: 'min(90vw, 21rem)' }}
           >
             {mapDockExpanded ? (
               <div className="vtt-media-dock-map-rail flex shrink-0 flex-col gap-2 rounded-[var(--vtt-radius)] px-2 py-2">
@@ -1001,7 +1006,7 @@ export function MediaDock({
                     </p>
                   ) : null}
                   {inCall && remoteSideParticipants.length > 0 ? (
-                    <div className="vtt-media-filmstrip vtt-media-filmstrip--map-rail flex min-h-0 flex-col gap-2 pb-1 pt-1">
+                    <div className="vtt-media-filmstrip vtt-media-filmstrip--map-rail flex flex-col gap-3 pb-1 pt-1">
                       {remoteSideParticipants.map((p) => (
                         <VideoThumb
                           key={p.id}
@@ -1022,7 +1027,7 @@ export function MediaDock({
               </div>
             ) : null}
             {showSelfPip && session.role === 'dm' && localStream ? (
-              <div className=" pointer-events-auto shrink-0 rounded-[var(--vtt-radius-sm)] p-1 w-full">
+              <div className="pointer-events-auto shrink-0 rounded-[var(--vtt-radius-sm)] p-1">
                 <VideoThumb
                   stream={localStream}
                   name={`Tú · ${label}`}
@@ -1037,7 +1042,7 @@ export function MediaDock({
                 />
               </div>
             ) : showSelfPip && selfSideParticipant ? (
-              <div className=" pointer-events-auto shrink-0 rounded-[var(--vtt-radius-sm)] p-1 w-full">
+              <div className="pointer-events-auto shrink-0 rounded-[var(--vtt-radius-sm)] p-1">
                 <VideoThumb
                   stream={selfSideParticipant.stream}
                   name={`Tú · ${label}`}

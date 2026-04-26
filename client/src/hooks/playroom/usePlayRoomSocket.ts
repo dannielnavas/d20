@@ -333,7 +333,7 @@ export function usePlayRoomSocket(
     const latest = state?.diceLog?.[0]
     if (!latest) return
     if (lastRollIdRef.current === null) {
-      triggerRollFx(latest)
+      lastRollIdRef.current = latest.id
       return
     }
     if (lastRollIdRef.current === latest.id) return

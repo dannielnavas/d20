@@ -105,6 +105,8 @@ export type MapBoardProps = {
   suppressDmMapVideoChrome?: boolean
   /** Jugador en mapa: paleta de reacciones a pantalla completa. */
   showReactionPalette?: boolean
+  dmScreen?: string
+  onDmScreenChange?: (screen: string) => void
 }
 
 export function MapBoard({
@@ -116,7 +118,10 @@ export function MapBoard({
   isSpectator = false,
   suppressDmMapVideoChrome = false,
   showReactionPalette = false,
+  dmScreen = 'mesa',
+  onDmScreenChange,
 }: MapBoardProps) {
+  const isPlayerView = !isDm && !isSpectator
   const { backgroundUrl, backgroundType, mapAudioEnabled } = roomState.settings
   const mapVolume = Math.min(100, Math.max(0, Math.round(roomState.settings.mapVolume ?? 70)))
   const [dims, setDims] = useState({ w: DEFAULT_W, h: DEFAULT_H })
@@ -128,7 +133,6 @@ export function MapBoard({
   const mapBoardA11yId = useId()
 
   const directMapVideoRef = useRef<HTMLVideoElement | null>(null)
-  const [dmScreen, setDmScreen] = useState<DmScreenId>('mesa')
 
   const onDirectMapAudioState = useCallback((el: HTMLVideoElement | null) => {
     directMapVideoRef.current = el
@@ -340,13 +344,19 @@ export function MapBoard({
 
   return (
     <section
-      className="flex min-h-0 w-full flex-1 flex-col gap-4"
+      className={`flex min-h-0 w-full flex-1 flex-col gap-4 ${isDm ? 'd20-dm-board' : ''} ${
+        isPlayerView ? 'd20-player-board' : ''
+      }`}
       aria-label={isDm ? 'Tablero del Narrador' : 'Tablero de juego'}
     >
-      {isDm ? <DmScreenNav value={dmScreen} onChange={setDmScreen} /> : null}
+      {isDm ? <DmScreenNav value={dmScreen as any} onChange={onDmScreenChange as any} /> : null}
 
       {isDm ? (
-        <DmSceneBar socket={socket} roomState={roomState} className="w-full max-w-4xl shrink-0" />
+        <DmSceneBar
+          socket={socket}
+          roomState={roomState}
+          className={`w-full max-w-4xl shrink-0 ${isDm ? 'd20-dm-scenebar' : ''}`}
+        />
       ) : null}
 
       {isDm && dmScreen === 'mapa' ? (
@@ -383,7 +393,11 @@ export function MapBoard({
 
       {showInteractiveMap ? (
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <p className="mb-2 max-w-prose text-xs leading-relaxed text-[var(--vtt-text-muted)]">
+          <p
+            className={`mb-2 max-w-prose text-xs leading-relaxed text-[var(--vtt-text-muted)] ${
+              isDm ? 'd20-dm-map-hintline' : isPlayerView ? 'd20-player-map-hintline' : ''
+            }`}
+          >
             {isDm
               ? 'Vista Mesa: rueda o pellizco para acercar o alejar; arrastra el fondo por las zonas vacías. Mayús+clic en el mapa para ping. Reacciones a pantalla: columna derecha.'
               : 'Rueda o pellizco para zoom en el mapa. Arrastra tu ficha con el dedo o el ratón; Mayús+clic en el mapa para ping. Reacciones en el panel de herramientas a la izquierda. El fondo se mueve desde las zonas vacías.'}

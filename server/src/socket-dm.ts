@@ -449,7 +449,6 @@ export function registerDmHandlers(io: Server, socket: Socket) {
       if (idx !== -1) {
         scene.tokens.splice(idx, 1)
         deleted = true
-        break
       }
     }
     if (!deleted) return
@@ -468,9 +467,10 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     if (!tokenId) return
 
     const room = getOrCreateRoom(roomId)
-    const token = findTokenInRoom(room, tokenId)
-    if (!token) return
-    if (!canPatchToken(socket, token)) {
+    const tokensToPatch = room.scenes.flatMap(s => s.tokens).filter(t => t.id === tokenId)
+    if (tokensToPatch.length === 0) return
+    const primaryToken = tokensToPatch[0]
+    if (!canPatchToken(socket, primaryToken)) {
       socket.emit('dmError', {
         message:
           'No puedes editar esa ficha. Solo el Narrador o el jugador que la controla pueden hacerlo.',
@@ -479,24 +479,26 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     }
 
     const isDm = Boolean((socket.data as VttSocketData).isDm)
-
-    if (typeof o.name === 'string' && o.name.trim()) {
-      if (isDm) token.name = o.name.trim().slice(0, 60)
-    }
-    if (typeof o.img === 'string') {
-      token.img = o.img.trim().slice(0, 2000)
-    }
     const frameColor = parseFrameColor(o.frameColor)
-    if (frameColor) token.frameColor = frameColor
     const hpMax = parseHpValue(o.hitPointsMax)
     const hpCurrent = parseHpValue(o.hitPointsCurrent)
     const hpTemp = parseHpValue(o.hitPointsTemp)
-    if (hpMax !== null) token.hitPointsMax = hpMax
-    if (hpCurrent !== null) token.hitPointsCurrent = hpCurrent
-    if (hpTemp !== null) token.hitPointsTemp = hpTemp
-    token.hitPointsMax = Math.max(0, token.hitPointsMax ?? 0)
-    token.hitPointsCurrent = Math.max(0, Math.min(token.hitPointsCurrent ?? 0, token.hitPointsMax))
-    token.hitPointsTemp = Math.max(0, token.hitPointsTemp ?? 0)
+
+    for (const token of tokensToPatch) {
+      if (typeof o.name === 'string' && o.name.trim()) {
+        if (isDm) token.name = o.name.trim().slice(0, 60)
+      }
+      if (typeof o.img === 'string') {
+        token.img = o.img.trim().slice(0, 2000)
+      }
+      if (frameColor) token.frameColor = frameColor
+      if (hpMax !== null) token.hitPointsMax = hpMax
+      if (hpCurrent !== null) token.hitPointsCurrent = hpCurrent
+      if (hpTemp !== null) token.hitPointsTemp = hpTemp
+      token.hitPointsMax = Math.max(0, token.hitPointsMax ?? 0)
+      token.hitPointsCurrent = Math.max(0, Math.min(token.hitPointsCurrent ?? 0, token.hitPointsMax))
+      token.hitPointsTemp = Math.max(0, token.hitPointsTemp ?? 0)
+    }
 
     schedulePersist()
     broadcastRoomState(io, room)
@@ -652,10 +654,16 @@ export function registerDmHandlers(io: Server, socket: Socket) {
     const newScene = room.scenes.find((s) => s.id === sceneId)!
 
     if (oldScene.id !== newScene.id) {
-      const pcs = oldScene.tokens.filter((t) => t.type === 'pc')
-      for (const pc of pcs) {
-        if (!newScene.tokens.some((nt) => nt.id === pc.id)) {
-          newScene.tokens.push({ ...pc })
+      const tokensToCopy = oldScene.tokens.filter((t) => t.type === 'pc' || t.type === 'npc')
+      for (const tok of tokensToCopy) {
+        if (!newScene.tokens.some((nt) => nt.id === tok.id)) {
+          const newToken = { ...tok }
+          if (newToken.type === 'npc') {
+            newToken.onMap = false
+            newToken.x = 0
+            newToken.y = 0
+          }
+          newScene.tokens.push(newToken)
         }
       }
     }

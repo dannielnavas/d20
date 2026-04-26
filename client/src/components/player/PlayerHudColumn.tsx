@@ -108,7 +108,7 @@ export function PlayerHudColumn({
       <div className="pointer-events-auto fixed right-2 top-[5.5rem] z-[90] sm:right-3 sm:top-24">
         <button
           type="button"
-          className="vtt-hud-toggle-btn"
+          className="vtt-hud-toggle-btn d20-player-hud-toggle"
           onClick={() => setDockOpen((prev) => !prev)}
           aria-expanded={dockOpen}
           aria-controls="player-hud-column"
@@ -131,32 +131,69 @@ export function PlayerHudColumn({
       {!dockOpen ? null : (
         <div
           id="player-hud-column"
-          className="vtt-hud-column vtt-hud-column--floating fixed right-2 top-[8.15rem] z-[89] flex w-[min(17.5rem,calc(100vw-1rem))] max-h-[calc(100svh-8.2rem)] flex-col gap-1.5 overflow-y-auto pb-2 [scrollbar-gutter:stable] sm:right-3 sm:top-[8.6rem] sm:max-h-[calc(100svh-8.65rem)]"
+          className="vtt-hud-column vtt-hud-column--floating d20-player-hud-column fixed right-2 top-[8.15rem] z-[89] flex w-[min(17.5rem,calc(100vw-1rem))] max-h-[calc(100svh-8.2rem)] flex-col gap-1.5 overflow-y-auto pb-2 [scrollbar-gutter:stable] sm:right-3 sm:top-[8.6rem] sm:max-h-[calc(100svh-8.65rem)]"
           aria-label="Herramientas del jugador"
         >
+          {/* Role badge del jugador */}
+          <div className="sticky top-0 z-[1] shrink-0 bg-[var(--vtt-bg)]/90 pb-1 backdrop-blur-md">
+            <div className="flex items-center gap-1.5 px-0.5">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-[#f59e0b]/15 text-[0.7rem] text-[#f59e0b]" aria-hidden>
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2a2 2 0 100 4 2 2 0 000-4zm-4 5.5A1.5 1.5 0 015.5 6h5A1.5 1.5 0 0112 7.5v.5c0 2.21-1.79 4-4 4S4 10.21 4 8v-.5z" fill="currentColor"/></svg>
+              </span>
+              <span className="font-vtt-display text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-[#f59e0b]/70">Jugador</span>
+            </div>
+          </div>
       {currentToken ? (
-        <DmCollapsibleCard roomId={roomId} sectionId="player-character" title="Tu personaje">
+        <DmCollapsibleCard
+          roomId={roomId}
+          sectionId="player-character"
+          title="Tu personaje"
+          iconAccent="indigo"
+          icon={
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+          }
+        >
           <div className="space-y-3 px-2 py-2">
-            <div className="flex items-center gap-3 rounded-[var(--vtt-radius-sm)] border border-[var(--vtt-border-subtle)] bg-[var(--vtt-bg)] px-3 py-3">
+            {/* Tarjeta de identidad */}
+            <div className="d20-player-identity-card">
               <div
-                className="h-14 w-14 overflow-hidden rounded-[1rem] border-[3px] bg-[var(--vtt-surface)]"
-                style={{ borderColor: frameColorDraft }}
+                className="d20-player-avatar"
+                style={{ '--avatar-ring': frameColorDraft } as React.CSSProperties}
               >
                 {avatarDraft ? (
                   <img src={avatarDraft} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center font-vtt-display text-sm text-[var(--vtt-gold)]">
+                  <div className="flex h-full w-full items-center justify-center text-sm font-bold text-[var(--vtt-text)]">
                     {currentToken.name.slice(0, 2).toUpperCase()}
                   </div>
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-vtt-display text-sm text-[var(--vtt-text)]">
+                <p className="text-sm font-semibold text-[var(--vtt-text)] truncate">
                   {currentToken.name}
                 </p>
-                <p className="text-[0.72rem] text-[var(--vtt-text-muted)]">
-                  HP {hpCurrentDraft}/{hpMaxDraft} · +{hpTempDraft}
-                </p>
+                {/* HP bar gradiente */}
+                <div className="mt-1.5">
+                  <div className="d20-hp-bar-track">
+                    <div
+                      className="d20-hp-bar-fill"
+                      style={{
+                        width: hpMaxDraft > 0 ? `${Math.max(0, Math.min(100, (hpCurrentDraft / hpMaxDraft) * 100))}%` : '0%',
+                      }}
+                    />
+                    {hpTempDraft > 0 && (
+                      <div
+                        className="d20-hp-bar-temp"
+                        style={{
+                          width: hpMaxDraft > 0 ? `${Math.min(20, (hpTempDraft / hpMaxDraft) * 100)}%` : '0%',
+                        }}
+                      />
+                    )}
+                  </div>
+                  <p className="mt-0.5 text-[0.65rem] text-[var(--vtt-text-muted)]">
+                    {hpCurrentDraft}/{hpMaxDraft} HP{hpTempDraft > 0 ? ` · +${hpTempDraft} temp` : ''}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -230,7 +267,15 @@ export function PlayerHudColumn({
         </DmCollapsibleCard>
       ) : null}
 
-      <DmCollapsibleCard roomId={roomId} sectionId="player-dice" title="Dados">
+      <DmCollapsibleCard
+        roomId={roomId}
+        sectionId="player-dice"
+        title="Dados"
+        iconAccent="amber"
+        icon={
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2" y="2" width="12" height="12" rx="2.5" stroke="currentColor" strokeWidth="1.3"/><circle cx="5.5" cy="5.5" r="1" fill="currentColor"/><circle cx="10.5" cy="10.5" r="1" fill="currentColor"/><circle cx="8" cy="8" r="1" fill="currentColor"/></svg>
+        }
+      >
         <DicePanel
           socket={socket}
           roomState={roomState}
@@ -242,7 +287,15 @@ export function PlayerHudColumn({
         />
       </DmCollapsibleCard>
 
-      <DmCollapsibleCard roomId={roomId} sectionId="player-initiative" title="Iniciativa">
+      <DmCollapsibleCard
+        roomId={roomId}
+        sectionId="player-initiative"
+        title="Iniciativa"
+        iconAccent="rose"
+        icon={
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.8 3.6 4 .6-2.9 2.8.7 4L8 11l-3.6 1.9.7-4L2.2 6.2l4-.6L8 2z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+        }
+      >
         <InitiativePanel
           placement="inline"
           initiative={roomState.initiative}
@@ -262,6 +315,10 @@ export function PlayerHudColumn({
         sectionId="player-chat"
         title="Chat y Actividad"
         badge={chatBadge}
+        iconAccent="indigo"
+        icon={
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v7a1 1 0 01-1 1H6l-3 2.5V11H3a1 1 0 01-1-1V3z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg>
+        }
         onExpandedChange={setChatDmSectionOpen}
       >
         <ChatPanel
@@ -282,7 +339,15 @@ export function PlayerHudColumn({
         />
       </DmCollapsibleCard>
 
-      <DmCollapsibleCard roomId={roomId} sectionId="player-notes" title="Notas Privadas (Narrador)">
+      <DmCollapsibleCard
+        roomId={roomId}
+        sectionId="player-notes"
+        title="Notas Privadas (Narrador)"
+        iconAccent="muted"
+        icon={
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="1.5" width="11" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M5 5h6M5 8h6M5 11h4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+        }
+      >
         <PrivateNotesPanel
           variant="player"
           socket={socket}
@@ -297,6 +362,10 @@ export function PlayerHudColumn({
         roomId={roomId}
         sectionId="player-tools"
         title="Reacciones e Imagen"
+        iconAccent="violet"
+        icon={
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM5.5 6a1 1 0 112 0 1 1 0 01-2 0zm4 0a1 1 0 112 0 1 1 0 01-2 0zM5.5 9.5C6 10.5 7 11.5 8 11.5s2-1 2.5-2h-5z" fill="currentColor"/></svg>
+        }
         defaultExpanded={false}
       >
         <div className="mt-2 space-y-4 px-2 py-2">

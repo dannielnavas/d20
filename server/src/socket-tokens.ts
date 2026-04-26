@@ -42,7 +42,7 @@ export function registerTokenHandlers(io: Server, socket: Socket) {
     if (!parsed) return
 
     const room = getOrCreateRoom(roomId)
-    const token = findTokenInRoom(room, parsed.tokenId)
+    const token = getActiveScene(room).tokens.find(t => t.id === parsed.tokenId)
     if (!token) {
       socket.emit('tokenError', {
         tokenId: parsed.tokenId,
@@ -89,7 +89,7 @@ export function registerTokenHandlers(io: Server, socket: Socket) {
     if (!parsed) return
 
     const room = getOrCreateRoom(roomId)
-    const token = findTokenInRoom(room, parsed.tokenId)
+    const token = getActiveScene(room).tokens.find(t => t.id === parsed.tokenId)
     if (!token) {
       socket.emit('tokenError', {
         tokenId: parsed.tokenId,
