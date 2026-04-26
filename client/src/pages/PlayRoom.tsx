@@ -243,15 +243,6 @@ export function PlayRoom() {
     session?.role !== 'spectator' &&
     (session?.role === 'dm' || (session?.role === 'player' && session.claimedTokenId)),
   )
-
-  const sessionLabel =
-    session?.role === 'dm'
-      ? 'Narrador'
-      : session?.role === 'spectator'
-        ? 'Espectador: solo ves la mesa'
-        : session?.claimedTokenId
-          ? 'Jugador en la mesa'
-          : 'Elige tu personaje para entrar a la mesa'
   const isCriticalD20 = Boolean(
     rollFxReveal && rollFx && rollFx.dieType === 'd20' && rollFx.total === 20,
   )
